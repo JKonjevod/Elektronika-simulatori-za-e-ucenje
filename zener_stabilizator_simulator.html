@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stabilizator sa Zenerovom diodom</title>
+<style>
+:root{--bg:#FFFFFF;--ink:#1d1d1d;--muted:#757575;--line:#D9DCE3;--blue:#164194;--blue-soft:#EEF2FA;--gold:#B19E3F;--gold-soft:#F6F2DF;--red:#C00000;--red-soft:#FBEAEA;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E}}
+:root[data-theme="dark"]{--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Liberation Sans",Helvetica,sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 28px 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:28px;align-items:start}
+svg{display:block;width:100%;height:auto;max-width:100%}
+svg text{font-family:Arial,"Liberation Sans",sans-serif}
+svg text.v,.vi{font-family:"Times New Roman","Liberation Serif",serif;font-style:italic}
+svg text.v tspan{font-style:normal}
+.vi{font-size:1.12em}
+#zTri{fill:var(--blue-soft);transition:fill .12s}
+.zon #zTri{fill:var(--gold)}
+.zhot #zTri{fill:var(--red)}
+.now{display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:center;margin-top:10px;font-size:17px;color:var(--muted)}
+.now b{color:var(--ink);font-variant-numeric:tabular-nums}
+.state{display:block;margin:10px auto 0;max-width:520px;text-align:center;font-size:16px;font-weight:bold;padding:8px 12px;border-radius:8px;color:var(--muted);background:transparent}
+.state.ok{color:var(--gold);background:var(--gold-soft)}
+.state.warn{color:var(--red);background:var(--red-soft)}
+.gt{font-size:15px;color:var(--muted);margin:0 0 2px 4px}
+.leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);margin:0 0 2px 4px}
+.leg>span{display:inline-flex;align-items:center;gap:6px}
+.leg i.sw{display:inline-block;width:20px;border-top-width:3px;border-top-style:solid}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px 22px;align-items:end;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-size:16px;color:var(--muted);margin-bottom:8px}
+.ctl label output{color:var(--blue);font-weight:bold;font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+.seg{display:flex;border:2px solid var(--blue);border-radius:8px;overflow:hidden;width:max-content}
+.seg button{border:0;background:transparent;color:var(--blue);font:inherit;font-size:14px;padding:9px 8px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--blue);color:var(--bg);font-weight:bold}
+.play{border:2px solid var(--gold);background:var(--gold-soft);color:var(--ink);font:inherit;font-size:15px;font-weight:bold;padding:9px 18px;border-radius:8px;cursor:pointer;min-width:132px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.facts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:16px}
+.fact{padding:4px 16px;border-left:1px solid var(--line)}
+.fact:first-child{border-left:0;padding-left:0}
+.fact .k{font-size:14px;color:var(--muted);margin-bottom:4px;min-height:2.4em}
+.fact .val{font-size:26px;font-weight:bold;color:var(--blue);font-variant-numeric:tabular-nums}
+.fact .val.bad{color:var(--red)}
+.fact .f{font-size:13px;color:var(--muted);margin-top:2px}
+@media (max-width:900px){.stage{grid-template-columns:1fr}.facts{grid-template-columns:1fr 1fr;row-gap:14px}.fact{border-left:0;padding-left:0}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1 class="sr">Stabilizator napona sa Zenerovom diodom – interaktivni prikaz</h1>
+<div class="stage">
+<section aria-label="Shema spoja">
+<svg id="circ" viewBox="0 0 960 470" role="img" aria-label="Izvor U UL s valovitošću, predotpor R, Zenerova dioda i trošilo R T spojeni paralelno">
+<defs>
+<marker id="ga" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--gold)"/></marker>
+</defs>
+<g fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+<path d="M100,160 L100,80 L240,80 M380,80 L720,80 L720,185 M720,295 L720,400 L100,400 L100,318 M100,300 L100,225"/>
+<path d="M500,80 L500,206 M500,276 L500,400"/>
+</g>
+<circle cx="100" cy="192" r="32" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<path d="M82,192 Q91,170 100,192 T118,192" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round"/>
+<line x1="68" y1="300" x2="132" y2="300" stroke="var(--blue)" stroke-width="3.5"/>
+<line x1="84" y1="318" x2="116" y2="318" stroke="var(--blue)" stroke-width="7"/>
+<text x="56" y="203" class="v" font-size="34" fill="var(--blue)" text-anchor="end">u<tspan font-size="21" dy="8">ULv</tspan></text>
+<text x="56" y="322" class="v" font-size="34" fill="var(--blue)" text-anchor="end">U<tspan font-size="21" dy="8">UL</tspan></text>
+<text x="128" y="148" font-size="30" fill="var(--muted)" text-anchor="middle">+</text>
+<rect x="240" y="64" width="140" height="32" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="310" y="140" class="v" font-size="34" fill="var(--blue)" text-anchor="middle">R</text>
+<g id="zen">
+<path id="zTri" d="M478,276 L522,276 L500,238 Z" stroke="var(--blue)" stroke-width="3.5" stroke-linejoin="round"/>
+<path d="M468,246 L478,236 L522,236 L532,226" fill="none" stroke="var(--blue)" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+</g>
+<text x="440" y="252" class="v" font-size="30" fill="var(--blue)" text-anchor="end">D<tspan font-size="19" dy="7">Z</tspan></text>
+<rect x="704" y="185" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="690" y="252" class="v" font-size="34" fill="var(--blue)" text-anchor="end">R<tspan font-size="21" dy="8">T</tspan></text>
+<circle cx="500" cy="80" r="8" fill="var(--blue)"/><circle cx="500" cy="400" r="8" fill="var(--blue)"/>
+<text x="900" y="160" font-size="30" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="900" y="350" font-size="30" fill="var(--muted)" text-anchor="middle">−</text>
+<text x="872" y="262" class="v" font-size="34" fill="var(--gold)">u<tspan font-size="21" dy="8">IZ</tspan></text>
+<g id="aR"><line x1="272" y1="40" x2="350" y2="40" stroke="var(--gold)" stroke-width="3.2" marker-end="url(#ga)"/><text x="311" y="28" class="v" font-size="30" fill="var(--gold)" text-anchor="middle">I<tspan font-size="19" dy="7">R</tspan></text></g>
+<g id="aZ"><line x1="560" y1="200" x2="560" y2="280" stroke="var(--gold)" stroke-width="3.2" marker-end="url(#ga)"/><text x="574" y="250" class="v" font-size="30" fill="var(--gold)">I<tspan font-size="19" dy="7">Z</tspan></text></g>
+<g id="aT"><line x1="780" y1="200" x2="780" y2="280" stroke="var(--gold)" stroke-width="3.2" marker-end="url(#ga)"/><text x="794" y="250" class="v" font-size="30" fill="var(--gold)">I<tspan font-size="19" dy="7">T</tspan></text></g>
+</svg>
+<div class="now" id="now" aria-live="polite"></div>
+<span class="state" id="state"></span>
+</section>
+<section aria-label="Grafovi">
+<div class="gt">Karakteristika Zenerove diode u zapornom smjeru i radni pravac</div>
+<div class="leg"><span><i class="sw" style="border-color:var(--gold)"></i>dioda</span><span><i class="sw" style="border-color:var(--blue)"></i>radni pravac</span><span><i class="sw" style="border-color:var(--blue);border-top-style:dashed;opacity:.5"></i>raspon zbog valovitosti</span><span><i class="sw" style="border-color:var(--red);border-top-style:dashed"></i><span><span class="vi">P</span><sub>Zmax</sub></span></span></div>
+<svg id="gK" viewBox="0 0 720 306" role="img" aria-label="Karakteristika diode, radni pravac i radna točka"></svg>
+<div class="leg" style="margin-top:8px"><span><i class="sw" style="border-top-style:dashed;border-color:var(--blue)"></i><span><span class="vi">u</span><sub>UL</sub></span></span><span><i class="sw" style="border-color:var(--gold)"></i><span><span class="vi">u</span><sub>IZ</sub></span></span></div>
+<svg id="gT" viewBox="0 0 720 230" role="img" aria-label="Ulazni i izlazni napon u vremenu" style="touch-action:none;cursor:ew-resize"></svg>
+</section>
+</div>
+
+<div class="controls">
+<div class="ctl"><label for="uul"><span>Ulazni napon <span class="vi">U</span><sub>UL</sub></span><output id="uulO">15 V</output></label><input id="uul" type="range" min="0" max="30" step="0.5" value="15"></div>
+<div class="ctl"><label for="rip"><span>Valovitost <span class="vi">U</span><sub>ULvm</sub></span><output id="ripO">1 V</output></label><input id="rip" type="range" min="0" max="4" step="0.1" value="1"></div>
+<div class="ctl"><label for="rr"><span>Predotpor <span class="vi">R</span></span><output id="rrO">220 Ω</output></label><input id="rr" type="range" min="0" max="1000" step="1" value="603"></div>
+<div class="ctl"><label for="rt"><span>Trošilo <span class="vi">R</span><sub>T</sub></span><output id="rtO">1 kΩ</output></label><input id="rt" type="range" min="0" max="1000" step="1" value="500"></div>
+<div class="ctl"><label><span>Zenerov napon <span class="vi">U</span><sub>Z</sub></span></label><div class="seg" role="group" aria-label="Zenerov napon"><button type="button" data-uz="5.1" aria-pressed="false">5,1 V</button><button type="button" data-uz="6.8" aria-pressed="false">6,8 V</button><button type="button" data-uz="9.1" aria-pressed="true">9,1 V</button><button type="button" data-uz="12" aria-pressed="false">12 V</button></div></div>
+<div class="ctl"><label><span>Vrijeme</span></label><button type="button" class="play" id="play">Pokreni</button></div>
+</div>
+<div class="facts" id="facts"></div>
+</main>
+<script>
+(function(){
+var NS="http://www.w3.org/2000/svg";
+var PZMAX=0.5, RZ=8, IZMIN=0.005, KW=0.04;
+var st={U:15,Ur:1,R:220,RT:1000,UZ:9.1,t:5,play:false};
+var N=400,T=40,dt=T/N;
+var $=function(id){return document.getElementById(id);};
+var nf=function(x,d){return (Math.abs(x)<1e-9?0:x).toLocaleString("hr-HR",{minimumFractionDigits:0,maximumFractionDigits:d});};
+function fI(a){var m=a*1000;if(Math.abs(m)>=1000)return nf(a,2)+" A";if(Math.abs(m)>=1)return nf(m,1)+" mA";return nf(m*1000,0)+" µA";}
+function fR(r){if(!isFinite(r))return "∞ (bez trošila)";return r<1000?nf(Math.round(r),0)+" Ω":nf(r/1000,r<10000?2:1)+" kΩ";}
+var sub=function(b,s){return '<span class="vi">'+b+'</span><sub>'+s+'</sub>';};
+function UZ0(){return st.UZ-IZMIN*RZ;}
+function iz(v){var x=(v-UZ0())/KW;var sp=x>30?x:Math.log(1+Math.exp(x));return KW*sp/RZ;}
+function gT(){return isFinite(st.RT)?1/st.RT:0;}
+function solve(U){
+  if(U<=0)return 0;var lo=0,hi=U,g=gT();
+  for(var k=0;k<60;k++){var m=(lo+hi)/2,f=(U-m)/st.R-m*g-iz(m);if(f>0)lo=m;else hi=m;}
+  return (lo+hi)/2;
+}
+var S;
+function simulate(){
+  var w=2*Math.PI/20,u=[],v=[];
+  for(var i=0;i<=N;i++){var uu=st.U+st.Ur*Math.sin(w*i*dt);uu=Math.max(0,uu);u.push(uu);v.push(solve(uu));}
+  var umax=-1,umin=1e9,vmax=-1,vmin=1e9,vs=0;
+  for(i=N/2;i<N;i++){umax=Math.max(umax,u[i]);umin=Math.min(umin,u[i]);vmax=Math.max(vmax,v[i]);vmin=Math.min(vmin,v[i]);vs+=v[i];}
+  var vavg=vs/(N/2), v0=solve(st.U);
+  S={u:u,v:v,dU:umax-umin,dV:vmax-vmin,vavg:vavg,v0:v0,umax:umax,umin:umin};
+}
+function el(g,n,a,txt){var e=document.createElementNS(NS,n);for(var i in a)e.setAttribute(i,a[i]);if(txt!=null)e.textContent=txt;g.appendChild(e);return e;}
+function arrowAxes(g,ox,oy,x2,ytop,xl,yl){
+  el(g,"path",{d:"M"+(ox-6)+","+oy+" L"+x2+","+oy,stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+x2+","+(oy-6)+" L"+(x2+12)+","+oy+" L"+x2+","+(oy+6)+" Z",fill:"var(--muted)"});
+  el(g,"path",{d:"M"+ox+","+(oy+6)+" L"+ox+","+(ytop+10),stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox-6)+","+(ytop+12)+" L"+ox+","+ytop+" L"+(ox+6)+","+(ytop+12)+" Z",fill:"var(--muted)"});
+}
+function nice(x){var p=Math.pow(10,Math.floor(Math.log10(x))),m=x/p;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p;}
+/* karakteristika + radni pravac */
+var gK=$("gK"),kDot,kDotV;
+function drawK(){
+  gK.innerHTML="";
+  var ox=70,oy=262,W=600,Hh=236;
+  var vmax=Math.max(st.UZ*1.35,Math.min(S.umax*1.02,st.UZ*2.2));
+  var izmax=PZMAX/st.UZ;
+  var g=gT(), ia=st.U/st.R;
+  var imax=Math.max(izmax*1.25, Math.min(ia, izmax*2.5));
+  var X=function(v){return ox+W*v/vmax;}, Y=function(i){return oy-Hh*i/imax;};
+  var stepV=nice(vmax/6), stepI=nice(imax/4);
+  for(var vv=stepV;vv<vmax*0.999;vv+=stepV){el(gK,"line",{x1:X(vv),y1:oy,x2:X(vv),y2:oy-Hh,stroke:"var(--line)","stroke-width":1});el(gK,"text",{x:X(vv),y:oy+20,"text-anchor":"middle","font-size":13,fill:"var(--muted)"},nf(vv,1));}
+  for(var ii=stepI;ii<imax*0.999;ii+=stepI){el(gK,"line",{x1:ox,y1:Y(ii),x2:ox+W,y2:Y(ii),stroke:"var(--line)","stroke-width":1});el(gK,"text",{x:ox-8,y:Y(ii)+5,"text-anchor":"end","font-size":13,fill:"var(--muted)"},nf(ii*1000,0));}
+  arrowAxes(gK,ox,oy,ox+W+14,8);
+  el(gK,"text",{x:ox+10,y:22,"font-size":13,fill:"var(--muted)"},"mA");
+  var tl=el(gK,"text",{x:ox+W+14,y:oy+36,"font-size":20,fill:"var(--muted)",class:"v","text-anchor":"end"});tl.innerHTML='U<tspan font-size="13" dy="5">Z</tspan><tspan dy="-5" font-style="normal" font-size="13" font-family="Arial"> (V)</tspan>';
+  var il=el(gK,"text",{x:ox-12,y:22,"font-size":20,fill:"var(--muted)",class:"v","text-anchor":"end"});il.innerHTML='I<tspan font-size="13" dy="5">Z</tspan>';
+  
+  // I_Zmin i I_Zmax
+  [[IZMIN,"Zmin"],[izmax,"Zmax"]].forEach(function(p){if(p[0]<imax){el(gK,"line",{x1:ox,y1:Y(p[0]),x2:ox+W,y2:Y(p[0]),stroke:"var(--muted)","stroke-width":1.2,"stroke-dasharray":"4 4"});var t=el(gK,"text",{x:ox+W-4,y:Y(p[0])-6,"text-anchor":"end","font-size":16,fill:"var(--muted)",class:"v"});t.innerHTML='I<tspan font-size="11" dy="4">'+p[1]+'</tspan>';}});
+  // P_Zmax hiperbola
+  var d="",first=true;for(var k=0;k<=200;k++){var v=vmax*0.3+vmax*0.7*k/200,i=PZMAX/v;if(i>imax)continue;d+=(first?"M":"L")+X(v).toFixed(1)+","+Y(i).toFixed(1);first=false;}
+  if(d)el(gK,"path",{d:d,fill:"none",stroke:"var(--red)","stroke-width":2,"stroke-dasharray":"8 6"});
+  // dioda
+  d="";for(k=0;k<=300;k++){var v2=vmax*k/300,i2=iz(v2);if(i2>imax){d+="L"+X(UZ0()+imax*RZ).toFixed(1)+","+Y(imax).toFixed(1);break;}d+=(k?"L":"M")+X(v2).toFixed(1)+","+Y(i2).toFixed(1);}
+  el(gK,"path",{d:d,fill:"none",stroke:"var(--gold)","stroke-width":4,"stroke-linejoin":"round"});
+  // radni pravci: i = U/R - v(1/R + g)
+  function ll(U,attrs){var vi=U/(1+st.R*g);var p0=[0,U/st.R];if(p0[1]>imax){p0=[(U/st.R-imax)/(1/st.R+g),imax];}
+    var a={x1:X(p0[0]),y1:Y(p0[1]),x2:X(Math.min(vi,vmax)),y2:Y(Math.max(0,U/st.R-Math.min(vi,vmax)*(1/st.R+g)))};for(var q in attrs)a[q]=attrs[q];el(gK,"line",a);}
+  if(st.Ur>0){ll(S.umax,{stroke:"var(--blue)","stroke-width":1.6,"stroke-dasharray":"6 5",opacity:.5});ll(S.umin,{stroke:"var(--blue)","stroke-width":1.6,"stroke-dasharray":"6 5",opacity:.5});}
+  ll(st.U,{stroke:"var(--blue)","stroke-width":2.6});
+  var lab=el(gK,"text",{x:X(Math.min(st.U/(1+st.R*g),vmax))-4,y:oy-8,"font-size":16,fill:"var(--blue)",class:"v","text-anchor":"end"});
+  kDotV=el(gK,"line",{stroke:"var(--ink)","stroke-width":1,opacity:.35,"stroke-dasharray":"3 3"});
+  kDot=el(gK,"circle",{r:7,fill:"var(--gold)",stroke:"var(--bg)","stroke-width":2.5});
+  gK._X=X;gK._Y=Y;gK._oy=oy;
+}
+/* vremenski graf */
+var gTm=$("gT"),cT,dU,dV;
+function drawT(){
+  gTm.innerHTML="";
+  var ox=70,oy=200,W=600,Hh=180,top=Math.max(nice(S.umax*1.05),st.UZ*1.2);
+  var X=function(t){return ox+W*t/T;},Y=function(x){return oy-Hh*x/top;};
+  var st5=nice(top/4);
+  for(var y=st5;y<top*0.999;y+=st5){el(gTm,"line",{x1:ox,y1:Y(y),x2:ox+W,y2:Y(y),stroke:"var(--line)","stroke-width":1});el(gTm,"text",{x:ox-8,y:Y(y)+5,"text-anchor":"end","font-size":13,fill:"var(--muted)"},nf(y,1));}
+  [10,20,30,40].forEach(function(t){el(gTm,"text",{x:X(t),y:oy+20,"text-anchor":"middle","font-size":13,fill:"var(--muted)"},t);});
+  arrowAxes(gTm,ox,oy,ox+W+14,8);
+  el(gTm,"text",{x:ox+10,y:22,"font-size":13,fill:"var(--muted)"},"V");
+  el(gTm,"text",{x:ox+W+18,y:oy-10,"font-size":20,fill:"var(--muted)",class:"v","text-anchor":"end"},"t");
+  el(gTm,"text",{x:ox+W+14,y:oy+20,"text-anchor":"start","font-size":12,fill:"var(--muted)"},"ms");
+  function p(a){var s="";for(var i=0;i<=N;i++)s+=(i?"L":"M")+X(i*dt).toFixed(1)+","+Y(a[i]).toFixed(1);return s;}
+  el(gTm,"path",{d:p(S.u),fill:"none",stroke:"var(--blue)","stroke-width":2.2,"stroke-dasharray":"9 7"});
+  el(gTm,"path",{d:p(S.v),fill:"none",stroke:"var(--gold)","stroke-width":4,"stroke-linejoin":"round"});
+  cT=el(gTm,"line",{y1:10,y2:oy,stroke:"var(--ink)","stroke-width":1.2,opacity:.5});
+  dU=el(gTm,"circle",{r:5.5,fill:"var(--bg)",stroke:"var(--blue)","stroke-width":2.5});
+  dV=el(gTm,"circle",{r:6.5,fill:"var(--gold)",stroke:"var(--bg)","stroke-width":2});
+  gTm._X=X;gTm._Y=Y;
+}
+function facts(){
+  var v=S.v0,ir=(st.U-v)/st.R,it=v*gT(),izz=Math.max(0,ir-it),pz=v*izz,ok=izz>=IZMIN,hot=pz>PZMAX;
+  var supp=S.dV>1e-6?S.dU/S.dV:Infinity;
+  var f=[
+   ["Izlazni napon "+sub("U","IZ"),nf(S.vavg,2)+" V",ok?"≈ "+sub("U","Z")+" = "+nf(st.UZ,1)+" V":"manji od "+sub("U","Z")+" – nema stabilizacije",!ok],
+   ["Valovitost izlaza (vrh–vrh)",(S.dV<0.01?nf(S.dV*1000,1)+" mV":nf(S.dV,2)+" V"),"ulaz: "+nf(S.dU,1)+" V",false],
+   ["Potiskivanje valovitosti",st.Ur>0?(isFinite(supp)?nf(supp,supp<10?1:0)+" ×":"—"):"—",sub("ΔU","UL")+" / "+sub("ΔU","IZ"),false],
+   ["Struja diode "+sub("I","Z"),fI(izz),sub("I","R")+" − "+sub("I","T")+" ("+sub("I","Zmin")+" = "+fI(IZMIN)+")",!ok],
+   ["Snaga na diodi "+sub("P","Z"),nf(pz*1000,0)+" mW",sub("P","Zmax")+" = "+nf(PZMAX*1000,0)+" mW",hot]
+  ];
+  $("facts").innerHTML=f.map(function(x){return '<div class="fact"><div class="k">'+x[0]+'</div><div class="val'+(x[3]?' bad':'')+'">'+x[1]+'</div><div class="f">'+x[2]+'</div></div>';}).join("");
+}
+function drawNow(){
+  var i=Math.max(0,Math.min(N,Math.round(st.t/dt))),u=S.u[i],v=S.v[i];
+  var ir=(u-v)/st.R,it=v*gT(),izz=Math.max(0,ir-it),pz=v*izz;
+  var x=gTm._X(i*dt);cT.setAttribute("x1",x);cT.setAttribute("x2",x);
+  dU.setAttribute("cx",x);dU.setAttribute("cy",gTm._Y(u));dV.setAttribute("cx",x);dV.setAttribute("cy",gTm._Y(v));
+  var kx=gK._X(v),ky=gK._Y(izz);kDot.setAttribute("cx",kx);kDot.setAttribute("cy",ky);
+  kDotV.setAttribute("x1",kx);kDotV.setAttribute("x2",kx);kDotV.setAttribute("y1",ky);kDotV.setAttribute("y2",gK._oy);
+  var on=izz>=IZMIN,hot=pz>PZMAX;
+  var c=$("circ");c.classList.toggle("zon",on&&!hot);c.classList.toggle("zhot",hot);
+  $("aR").style.opacity=ir>1e-6?1:.15;$("aZ").style.opacity=izz>1e-6?1:.15;$("aT").style.opacity=it>1e-6?1:.15;
+  $("now").innerHTML=[sub("u","UL")+" = <b>"+nf(u,2)+" V</b>",sub("u","IZ")+" = <b>"+nf(v,2)+" V</b>",sub("I","R")+" = <b>"+fI(ir)+"</b>",sub("I","Z")+" = <b>"+fI(izz)+"</b>",sub("I","T")+" = <b>"+fI(it)+"</b>"].map(function(s){return "<span>"+s+"</span>";}).join("");
+  var s=$("state");
+  if(hot){s.innerHTML="Snaga na diodi prelazi "+sub("P","Zmax")+" – povećajte predotpor "+'<span class="vi">R</span>';s.className="state warn";}
+  else if(on){s.innerHTML="Dioda je u proboju – izlazni napon je stabiliziran";s.className="state ok";}
+  else if(u>0){s.innerHTML="Struja diode manja je od "+sub("I","Zmin")+" – nema stabilizacije; smanjite "+'<span class="vi">R</span>'+" ili povećajte "+sub("U","UL");s.className="state warn";}
+  else {s.innerHTML="Nema ulaznog napona";s.className="state";}
+}
+function all(){simulate();drawK();drawT();facts();drawNow();}
+$("uul").addEventListener("input",function(e){st.U=parseFloat(e.target.value);$("uulO").textContent=nf(st.U,1)+" V";all();});
+$("rip").addEventListener("input",function(e){st.Ur=parseFloat(e.target.value);$("ripO").textContent=nf(st.Ur,1)+" V";all();});
+$("rr").addEventListener("input",function(e){st.R=22*Math.pow(10,e.target.value/1000*Math.log10(1000/22)*1);$("rrO").textContent=fR(st.R);all();});
+$("rt").addEventListener("input",function(e){var x=+e.target.value;st.RT=x>=1000?Infinity:50*Math.pow(10,x/1000*Math.log10(20000/50)*1.0);$("rtO").textContent=fR(st.RT);all();});
+document.querySelectorAll("[data-uz]").forEach(function(b){b.addEventListener("click",function(){st.UZ=parseFloat(b.getAttribute("data-uz"));document.querySelectorAll("[data-uz]").forEach(function(x){x.setAttribute("aria-pressed",x===b);});all();});});
+var last=0;
+function loop(ts){if(!st.play)return;if(last)st.t=(st.t+(ts-last)*20/4000)%T;last=ts;drawNow();requestAnimationFrame(loop);}
+$("play").addEventListener("click",function(){st.play=!st.play;this.textContent=st.play?"Zaustavi":"Pokreni";last=0;if(st.play)requestAnimationFrame(loop);});
+(function(){var drag=false;function seek(e){var r=gTm.getBoundingClientRect(),vx=(e.clientX-r.left)*720/r.width;st.t=Math.min(T,Math.max(0,(vx-70)/600*T));drawNow();}
+gTm.addEventListener("pointerdown",function(e){drag=true;gTm.setPointerCapture(e.pointerId);seek(e);});gTm.addEventListener("pointermove",function(e){if(drag)seek(e);});gTm.addEventListener("pointerup",function(){drag=false;});})();
+// početne vrijednosti klizača
+(function(){var r=$("rr"),t=$("rt");st.R=22*Math.pow(10,r.value/1000*Math.log10(1000/22));$("rrO").textContent=fR(st.R);st.RT=50*Math.pow(10,t.value/1000*Math.log10(20000/50));$("rtO").textContent=fR(st.RT);})();
+all();
+})();
+</script>
+</body>
+</html>

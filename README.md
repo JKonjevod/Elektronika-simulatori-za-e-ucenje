@@ -6,8 +6,8 @@ Interaktivni simulatori elektroničkih sklopova izrađeni kao nastavni materijal
 
 | Simulator | Opis | Pokreni |
 |---|---|---|
-| **Ispravljači** | Poluvalni, punovalni sa srednjim izvodom, mosni i poluvalni ispravljač s kapacitivnim filtrom. Prikaz ulaznog i izlaznog napona, struja dioda, srednje i efektivne vrijednosti, faktora valovitosti i zapornog napona diode. | [Otvori](https://vaše-korisničko-ime.github.io/Elektronika-simulatori/ispravljaci_simulator.html) |
-| **Stabilizator sa Zenerovom diodom** | Karakteristika Zenerove diode s radnim pravcem, utjecaj ulaznog napona, predotpora i trošila, potiskivanje valovitosti te granice I<sub>Zmin</sub> i P<sub>Zmax</sub>. | [Otvori](https://vaše-korisničko-ime.github.io/Elektronika-simulatori/zener_stabilizator_simulator.html) |
+| **Ispravljači** | Poluvalni, punovalni sa srednjim izvodom, mosni i poluvalni ispravljač s kapacitivnim filtrom. Prikaz ulaznog i izlaznog napona, struja dioda, srednje i efektivne vrijednosti, faktora valovitosti i zapornog napona diode. | [Otvori](https://jkonjevod.github.io/Elektronika-simulatori-za-e-ucenje/ispravljaci_simulator.html) |
+| **Stabilizator sa Zenerovom diodom** | Karakteristika Zenerove diode s radnim pravcem, utjecaj ulaznog napona, predotpora i trošila, potiskivanje valovitosti te granice I<sub>Zmin</sub> i P<sub>Zmax</sub>. | [Otvori](https://jkonjevod.github.io/Elektronika-simulatori-za-e-ucenje/zener_stabilizator_simulator.html) |
 
 ## Kako se koriste
 

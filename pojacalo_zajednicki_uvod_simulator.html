@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pojačalo u spoju zajedničkog uvoda – simulator</title>
+<style>
+:root{--bg:#FFFFFF;--ink:#1d1d1d;--muted:#757575;--line:#D9DCE3;--blue:#164194;--blue-soft:#EEF2FA;--gold:#B19E3F;--gold-soft:#F6F2DF;--red:#C00000;--red-soft:#FBEAEA;--off:#ECECEC;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E;--off:#24272E}}
+:root[data-theme="dark"]{--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E;--off:#24272E}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Liberation Sans",Helvetica,sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 28px 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.stage{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:28px;align-items:start}
+.left{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,0.85fr);gap:16px;align-items:start}
+svg{display:block;width:100%;height:auto;max-width:100%}
+svg text{font-family:Arial,"Liberation Sans",sans-serif}
+svg text.v,.vi{font-family:"Times New Roman","Liberation Serif",serif;font-style:italic}
+svg text.v tspan{font-style:normal}
+.vi{font-size:1.12em}
+.ch{fill:var(--blue);transition:fill .12s}
+.on .ch{fill:var(--gold)}
+.now{display:flex;flex-direction:column;gap:6px;font-size:17px;color:var(--muted);padding-top:12px}
+.now b{color:var(--ink);font-variant-numeric:tabular-nums}
+.state{display:block;margin:12px 0 0;text-align:center;font-size:15px;font-weight:bold;padding:8px 12px;border-radius:8px}
+.state.sat{color:var(--gold);background:var(--gold-soft)}
+.state.tri{color:var(--blue);background:var(--blue-soft)}
+.state.off{color:var(--muted);background:var(--off)}
+.state.warn{color:var(--red);background:var(--red-soft)}
+.gt{font-size:15px;color:var(--muted);margin:6px 0 2px 4px}
+.leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);margin:0 0 2px 4px}
+.leg>span{display:inline-flex;align-items:center;gap:6px}
+.leg i.sw{display:inline-block;width:20px;border-top-width:3px;border-top-style:solid}
+.leg i.bx{display:inline-block;width:14px;height:12px;border-radius:2px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:16px 22px;align-items:end;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--muted);margin-bottom:8px}
+.ctl label output{color:var(--blue);font-weight:bold;font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+.play{border:2px solid var(--gold);background:var(--gold-soft);color:var(--ink);font:inherit;font-size:15px;font-weight:bold;padding:9px 18px;border-radius:8px;cursor:pointer;min-width:132px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.facts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:16px}
+.fact{padding:4px 16px;border-left:1px solid var(--line)}
+.fact:first-child{border-left:0;padding-left:0}
+.fact .k{font-size:14px;color:var(--muted);margin-bottom:4px;min-height:2.4em}
+.fact .val{font-size:26px;font-weight:bold;color:var(--blue);font-variant-numeric:tabular-nums}
+.fact .val.bad{color:var(--red)}
+.fact .f{font-size:13px;color:var(--muted);margin-top:2px}
+@media (max-width:1000px){.stage{grid-template-columns:1fr}.facts{grid-template-columns:1fr 1fr;row-gap:14px}.fact{border-left:0;padding-left:0}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1 class="sr">Pojačalo s n-kanalnim MOSFET-om u spoju zajedničkog uvoda – interaktivni prikaz</h1>
+<div class="stage">
+<section aria-label="Shema i valni oblici">
+<div class="left">
+<svg id="sch" viewBox="40 50 490 640" role="img" aria-label="Spoj zajedničkog uvoda: izvor napajanja, trošilo R T, tranzistor T1, ulaz u UL i izlaz u IZ">
+<defs><marker id="ga" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--gold)"/></marker></defs>
+<g fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round">
+<line x1="256" y1="428" x2="256" y2="532"/><line x1="109" y1="522" x2="256" y2="522"/>
+<path d="M276,438 L334,438 L334,340 M276,522 L334,522 L334,640 M294,480 L334,480 L334,522"/>
+<path d="M310,640 L358,640 M319,650 L349,650 M328,660 L340,660"/>
+<path d="M334,340 L334,300 M334,190 L334,100 M334,340 L471,340"/>
+</g>
+<g id="chan"><rect class="ch" x="273.5" y="422" width="5" height="32"/><rect class="ch" x="273.5" y="466" width="5" height="28"/><rect class="ch" x="273.5" y="506" width="5" height="32"/></g>
+<path d="M278,480 L300,469 L300,491 Z" fill="var(--blue)"/>
+<rect x="318" y="190" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="334" cy="340" r="8" fill="var(--blue)"/>
+<circle cx="334" cy="91" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<circle cx="480" cy="340" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<circle cx="100" cy="522" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="356" y="100" class="v" font-size="32" fill="var(--blue)">U<tspan font-size="20" dy="8">DD</tspan></text>
+<text id="tUdd" x="356" y="136" font-size="22" fill="var(--blue)" font-weight="bold"></text>
+<text x="364" y="255" class="v" font-size="32" fill="var(--blue)">R<tspan font-size="20" dy="8">T</tspan></text>
+<g id="aI"><line x1="284" y1="200" x2="284" y2="280" stroke="var(--gold)" stroke-width="3.2" marker-end="url(#ga)"/><text x="228" y="250" class="v" font-size="32" fill="var(--gold)">i<tspan font-size="20" dy="8">D</tspan></text></g>
+<text x="364" y="492" class="v" font-size="32" fill="var(--blue)">T<tspan font-size="20" dy="8">1</tspan></text>
+<text x="480" y="384" font-size="28" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="480" y="636" font-size="28" fill="var(--muted)" text-anchor="middle">−</text>
+<text x="452" y="500" class="v" font-size="32" fill="var(--gold)">u<tspan font-size="20" dy="8">IZ</tspan></text>
+<text x="124" y="514" font-size="28" fill="var(--muted)">+</text>
+<text x="120" y="636" font-size="28" fill="var(--muted)">−</text>
+<text x="80" y="590" class="v" font-size="32" fill="var(--blue)">u<tspan font-size="20" dy="8">UL</tspan></text>
+</svg>
+<div>
+<div class="now" id="now" aria-live="polite"></div>
+<span class="state" id="state"></span>
+</div>
+</div>
+<div class="gt">Izmjenične komponente: ulaz i izlaz</div>
+<div class="leg"><span><i class="sw" style="border-color:var(--blue);border-top-style:dashed"></i><span><span class="vi">u</span><sub>ul</sub></span></span><span><i class="sw" style="border-color:var(--gold)"></i><span><span class="vi">u</span><sub>iz</sub></span></span></div>
+<svg id="gT" viewBox="0 0 640 220" role="img" aria-label="Ulazni i izlazni izmjenični napon u vremenu" style="touch-action:none;cursor:ew-resize"></svg>
+</section>
+<section aria-label="Karakteristike">
+<div class="gt">Izlazne karakteristike s radnim pravcem</div>
+<div class="leg"><span><i class="sw" style="border-color:var(--blue)"></i>radni pravac</span><span><i class="sw" style="border-color:var(--gold)"></i><span><span class="vi">U</span><sub>GSQ</sub></span></span><span><i class="sw" style="border-color:var(--muted);border-top-style:dashed"></i>granica zasićenja</span></div>
+<svg id="gO" viewBox="0 0 720 300" role="img" aria-label="Izlazne karakteristike tranzistora, radni pravac i radna točka"></svg>
+<div class="gt">Prijenosna karakteristika sklopa <span class="vi">u</span><sub>IZ</sub>(<span class="vi">u</span><sub>UL</sub>)</div>
+<div class="leg"><span><i class="bx" style="background:var(--off)"></i>zapiranje</span><span><i class="bx" style="background:var(--gold-soft)"></i>zasićenje (pojačanje)</span><span><i class="bx" style="background:var(--blue-soft)"></i>triodno</span></div>
+<svg id="gP" viewBox="0 0 720 260" role="img" aria-label="Prijenosna karakteristika sklopa s radnom točkom"></svg>
+</section>
+</div>
+<div class="controls">
+<div class="ctl"><label for="udd"><span><span class="vi">U</span><sub>DD</sub></span><output id="uddO"></output></label><input id="udd" type="range" min="5" max="20" step="0.5" value="12"></div>
+<div class="ctl"><label for="rt"><span><span class="vi">R</span><sub>T</sub></span><output id="rtO"></output></label><input id="rt" type="range" min="0" max="1000" step="1" value="463"></div>
+<div class="ctl"><label for="ugq"><span>Radna točka <span class="vi">U</span><sub>GSQ</sub></span><output id="ugqO"></output></label><input id="ugq" type="range" min="0" max="5" step="0.05" value="2.5"></div>
+<div class="ctl"><label for="amp"><span>Signal <span class="vi">U</span><sub>ulm</sub></span><output id="ampO"></output></label><input id="amp" type="range" min="0" max="1" step="0.01" value="0.1"></div>
+<div class="ctl"><label for="kk"><span><span class="vi">K</span></span><output id="kkO"></output></label><input id="kk" type="range" min="0.5" max="5" step="0.1" value="2"></div>
+<div class="ctl"><label for="vt"><span><span class="vi">U</span><sub>GS0</sub></span><output id="vtO"></output></label><input id="vt" type="range" min="0.5" max="3" step="0.1" value="1"></div>
+<div class="ctl"><label for="lam"><span><span class="vi">λ</span></span><output id="lamO"></output></label><input id="lam" type="range" min="0" max="0.05" step="0.005" value="0.01"></div>
+<div class="ctl"><label><span>Vrijeme</span></label><button type="button" class="play" id="play">Pokreni</button></div>
+</div>
+<div class="facts" id="facts"></div>
+</main>
+<script>
+(function(){
+var NS="http://www.w3.org/2000/svg";
+var st={udd:12,rt:2,ugq:2.5,amp:0.1,K:2,vt:1,lam:0.01,t:0.25,play:false};
+var N=400,UGMAX=5;
+var $=function(id){return document.getElementById(id);};
+var nf=function(x,d){return (Math.abs(x)<1e-9?0:x).toLocaleString("hr-HR",{minimumFractionDigits:0,maximumFractionDigits:d});};
+var sub=function(b,s){return '<span class="vi">'+b+'</span><sub>'+s+'</sub>';};
+function fI(m){if(Math.abs(m)<1)return nf(m*1000,0)+" µA";return nf(m,2)+" mA";}
+function fR(k){return k>=1?nf(k,k<10?2:1)+" kΩ":nf(k*1000,0)+" Ω";}
+function id(ugs,uds){var vo=ugs-st.vt;if(vo<=0||uds<=0)return 0;var m=1+st.lam*uds;return uds<vo?st.K*(vo*uds-uds*uds/2)*m:st.K/2*vo*vo*m;}
+function region(ugs,uds){var vo=ugs-st.vt;if(vo<=0)return "off";return uds<vo?"tri":"sat";}
+function solve(ugs){var lo=0,hi=st.udd;for(var k=0;k<60;k++){var m=(lo+hi)/2;if(m-st.udd+st.rt*id(ugs,m)>0)hi=m;else lo=m;}return (lo+hi)/2;}
+function el(g,n,a,t){var e=document.createElementNS(NS,n);for(var i in a)e.setAttribute(i,a[i]);if(t!=null)e.textContent=t;g.appendChild(e);return e;}
+function nice(x){var p=Math.pow(10,Math.floor(Math.log10(x))),m=x/p;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p;}
+function axes(g,ox,oy,W,top,xl,xs,yl,ys,yu,xu){
+  el(g,"path",{d:"M"+(ox-6)+","+oy+" L"+(ox+W+12)+","+oy,stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox+W+12)+","+(oy-6)+" L"+(ox+W+24)+","+oy+" L"+(ox+W+12)+","+(oy+6)+" Z",fill:"var(--muted)"});
+  el(g,"path",{d:"M"+ox+","+(oy+6)+" L"+ox+","+(top+10),stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox-6)+","+(top+12)+" L"+ox+","+top+" L"+(ox+6)+","+(top+12)+" Z",fill:"var(--muted)"});
+  var t=el(g,"text",{x:ox+W+24,y:oy+34,"font-size":19,fill:"var(--muted)",class:"v","text-anchor":"end"});t.innerHTML=xl+'<tspan font-size="12" dy="5">'+xs+'</tspan><tspan dy="-5" font-style="normal" font-size="12" font-family="Arial"> ('+(xu||"V")+')</tspan>';
+  var u=el(g,"text",{x:ox-10,y:top+16,"font-size":19,fill:"var(--muted)",class:"v","text-anchor":"end"});u.innerHTML=yl+'<tspan font-size="12" dy="5">'+ys+'</tspan>';
+  el(g,"text",{x:ox+8,y:top+14,"font-size":12,fill:"var(--muted)"},yu);
+}
+var S;
+function simulate(){
+  var uq=solve(st.ugq),iq=id(st.ugq,uq),u=[],v=[],mx=-1e9,mn=1e9;
+  for(var i=0;i<=N;i++){var ug=Math.max(0,st.ugq+st.amp*Math.sin(2*Math.PI*2*i/N));var o=solve(ug);u.push(ug-st.ugq);v.push(o-uq);mx=Math.max(mx,o);mn=Math.min(mn,o);}
+  // granica zasićenja na prijenosnoj karakteristici
+  var ub=null,prev=null;for(var k=0;k<=500;k++){var x=st.vt+ (UGMAX-st.vt)*k/500,o2=solve(x);if(o2<x-st.vt){ub=x;break;}}
+  S={uq:uq,iq:iq,u:u,v:v,pp:mx-mn,umax:mx,umin:mn,ub:ub};
+}
+/* izlazne karakteristike */
+var gO=$("gO"),gP=$("gP"),gT=$("gT"),cT,dU,dV;
+function drawO(){
+  gO.innerHTML="";var ox=64,oy=256,W=600,Hh=232;
+  var i0=st.udd/st.rt,IM=nice(Math.max(i0,id(Math.min(UGMAX,st.ugq+st.amp),st.udd))*1.15);
+  var X=function(v){return ox+W*v/st.udd;},Y=function(i){return oy-Hh*Math.min(i,IM*1.02)/IM;};
+  var si=nice(IM/5);
+  for(var i=si;i<IM*0.999;i+=si){el(gO,"line",{x1:ox,y1:Y(i),x2:ox+W,y2:Y(i),stroke:"var(--line)","stroke-width":1});el(gO,"text",{x:ox-8,y:Y(i)+5,"text-anchor":"end","font-size":13,fill:"var(--muted)"},nf(i,1));}
+  var sv=nice(st.udd/6);for(var v=sv;v<=st.udd+1e-9;v+=sv){el(gO,"line",{x1:X(v),y1:oy,x2:X(v),y2:oy-Hh,stroke:"var(--line)","stroke-width":1});el(gO,"text",{x:X(v),y:oy+18,"text-anchor":"middle","font-size":13,fill:"var(--muted)"},nf(v,1));}
+  axes(gO,ox,oy,W,14,"u","DS","i","D","mA");
+  var d="";for(var k=0;k<=120;k++){var uu=st.udd*k/120,ii=st.K/2*uu*uu*(1+st.lam*uu);if(ii>IM)break;d+=(k?"L":"M")+X(uu).toFixed(1)+","+Y(ii).toFixed(1);}
+  el(gO,"path",{d:d,fill:"none",stroke:"var(--muted)","stroke-width":1.5,"stroke-dasharray":"6 5"});
+  function curve(ug,att){var p="";for(var k=0;k<=200;k++){var uu=st.udd*k/200;p+=(k?"L":"M")+X(uu).toFixed(1)+","+Y(id(ug,uu)).toFixed(1);}var a={d:p,fill:"none"};for(var q in att)a[q]=att[q];el(gO,"path",a);}
+  for(var g=0.5;g<=4.01;g+=0.5){var ug=st.vt+g;if(Math.abs(ug-st.ugq)<0.2)continue;if(id(ug,st.udd)>IM*1.3)break;curve(ug,{stroke:"var(--blue)","stroke-width":1.5,opacity:.35});}
+  if(st.amp>0){curve(st.ugq+st.amp,{stroke:"var(--gold)","stroke-width":1.6,"stroke-dasharray":"5 4",opacity:.8});curve(Math.max(0,st.ugq-st.amp),{stroke:"var(--gold)","stroke-width":1.6,"stroke-dasharray":"5 4",opacity:.8});}
+  curve(st.ugq,{stroke:"var(--gold)","stroke-width":3.6});
+  el(gO,"line",{x1:X(0),y1:Y(i0),x2:X(st.udd),y2:Y(0),stroke:"var(--blue)","stroke-width":2.6});
+  if(st.amp>0){var a1=S.umin,a2=S.umax;el(gO,"line",{x1:X(a1),y1:Y((st.udd-a1)/st.rt),x2:X(a2),y2:Y((st.udd-a2)/st.rt),stroke:"var(--gold)","stroke-width":7,opacity:.45,"stroke-linecap":"round"});}
+  el(gO,"circle",{cx:X(S.uq),cy:Y(S.iq),r:7.5,fill:"var(--gold)",stroke:"var(--bg)","stroke-width":2.5});
+  var tq=el(gO,"text",{x:X(S.uq)+10,y:Y(S.iq)-10,"font-size":16,fill:"var(--ink)","font-weight":"bold"},"Q");
+  gO._X=X;gO._Y=Y;
+  dOp=el(gO,"circle",{r:5,fill:"var(--bg)",stroke:"var(--gold)","stroke-width":2.5});
+}
+var dOp,dPp;
+/* prijenosna karakteristika sklopa */
+function drawP(){
+  gP.innerHTML="";var ox=64,oy=220,W=600,Hh=196;
+  var X=function(u){return ox+W*u/UGMAX;},Y=function(v){return oy-Hh*v/(st.udd*1.05);};
+  el(gP,"rect",{x:ox,y:oy-Hh,width:X(st.vt)-ox,height:Hh,fill:"var(--off)"});
+  var xb=S.ub==null?X(UGMAX):X(S.ub);
+  el(gP,"rect",{x:X(st.vt),y:oy-Hh,width:xb-X(st.vt),height:Hh,fill:"var(--gold-soft)"});
+  if(S.ub!=null)el(gP,"rect",{x:xb,y:oy-Hh,width:X(UGMAX)-xb,height:Hh,fill:"var(--blue-soft)"});
+  var sv=nice(st.udd/4);for(var v=sv;v<=st.udd+1e-9;v+=sv){el(gP,"line",{x1:ox,y1:Y(v),x2:ox+W,y2:Y(v),stroke:"var(--line)","stroke-width":1});el(gP,"text",{x:ox-8,y:Y(v)+5,"text-anchor":"end","font-size":13,fill:"var(--muted)"},nf(v,1));}
+  for(var u=1;u<=UGMAX;u++)el(gP,"text",{x:X(u),y:oy+18,"text-anchor":"middle","font-size":13,fill:"var(--muted)"},u);
+  axes(gP,ox,oy,W,10,"u","UL","u","IZ","V");
+  var p="";for(var k=0;k<=300;k++){var uu=UGMAX*k/300;p+=(k?"L":"M")+X(uu).toFixed(1)+","+Y(solve(uu)).toFixed(1);}
+  el(gP,"path",{d:p,fill:"none",stroke:"var(--gold)","stroke-width":4,"stroke-linejoin":"round"});
+  if(st.amp>0){var a=Math.max(0,st.ugq-st.amp),b=Math.min(UGMAX,st.ugq+st.amp);var q="";for(k=0;k<=40;k++){var x=a+(b-a)*k/40;q+=(k?"L":"M")+X(x).toFixed(1)+","+Y(solve(x)).toFixed(1);}el(gP,"path",{d:q,fill:"none",stroke:"var(--gold)","stroke-width":9,opacity:.45,"stroke-linecap":"round"});}
+  el(gP,"circle",{cx:X(st.ugq),cy:Y(S.uq),r:7.5,fill:"var(--gold)",stroke:"var(--bg)","stroke-width":2.5});
+  el(gP,"text",{x:X(st.ugq)+10,y:Y(S.uq)-10,"font-size":16,fill:"var(--ink)","font-weight":"bold"},"Q");
+  gP._X=X;gP._Y=Y;
+  dPp=el(gP,"circle",{r:5,fill:"var(--bg)",stroke:"var(--gold)","stroke-width":2.5});
+}
+/* vremenski graf */
+function drawT(){
+  gT.innerHTML="";var ox=56,oy=110,W=540,Hh=90;
+  var A=Math.max(st.amp,Math.max.apply(null,S.v.map(Math.abs)),0.05);var sc=nice(A*1.1);
+  var X=function(i){return ox+W*i/N;},Y=function(v){return oy-Hh*v/sc;};
+  [-sc,-sc/2,sc/2,sc].forEach(function(v){el(gT,"line",{x1:ox,y1:Y(v),x2:ox+W,y2:Y(v),stroke:"var(--line)","stroke-width":1});el(gT,"text",{x:ox-8,y:Y(v)+5,"text-anchor":"end","font-size":12,fill:"var(--muted)"},nf(v,2));});
+  el(gT,"path",{d:"M"+(ox-6)+","+oy+" L"+(ox+W+12)+","+oy,stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(gT,"path",{d:"M"+(ox+W+12)+","+(oy-6)+" L"+(ox+W+24)+","+oy+" L"+(ox+W+12)+","+(oy+6)+" Z",fill:"var(--muted)"});
+  el(gT,"line",{x1:ox,y1:oy+Hh+6,x2:ox,y2:oy-Hh-8,stroke:"var(--muted)","stroke-width":2});
+  el(gT,"text",{x:ox+W+18,y:oy-10,"font-size":19,fill:"var(--muted)",class:"v","text-anchor":"end"},"t");
+  el(gT,"text",{x:ox+6,y:oy-Hh-2,"font-size":12,fill:"var(--muted)"},"V");
+  function p(a){var s="";for(var i=0;i<=N;i++)s+=(i?"L":"M")+X(i).toFixed(1)+","+Y(a[i]).toFixed(1);return s;}
+  el(gT,"path",{d:p(S.u),fill:"none",stroke:"var(--blue)","stroke-width":2.2,"stroke-dasharray":"8 6"});
+  el(gT,"path",{d:p(S.v),fill:"none",stroke:"var(--gold)","stroke-width":3.6,"stroke-linejoin":"round"});
+  cT=el(gT,"line",{y1:oy-Hh-8,y2:oy+Hh+6,stroke:"var(--ink)","stroke-width":1.2,opacity:.5});
+  dU=el(gT,"circle",{r:5,fill:"var(--bg)",stroke:"var(--blue)","stroke-width":2.5});
+  dV=el(gT,"circle",{r:6,fill:"var(--gold)",stroke:"var(--bg)","stroke-width":2});
+  gT._X=X;gT._Y=Y;gT._ox=ox;gT._W=W;
+}
+function facts(){
+  var r=region(st.ugq,S.uq),vo=st.ugq-st.vt,gm=r==="sat"?st.K*vo*(1+st.lam*S.uq):0,rd=st.lam>0&&r==="sat"?1/(st.lam*S.iq):Infinity;
+  var rpar=isFinite(rd)?st.rt*rd/(st.rt+rd):st.rt,Au=-gm*rpar,meas=st.amp>0?-S.pp/(2*st.amp):null;
+  var f=[
+   ["Radna točka "+sub("I","DQ"),fI(S.iq),"iz sjecišta radnog pravca i karakteristike",false],
+   ["Izlazni napon "+sub("U","IZQ")+" = "+sub("U","DSQ"),nf(S.uq,2)+" V",sub("U","DD")+" − "+sub("I","DQ")+sub("R","T"),false],
+   ["Strmina "+sub("g","m"),r==="sat"?nf(gm,2)+" mA/V":"—",r==="sat"?sub("K","")+"("+sub("U","GSQ")+" − "+sub("U","GS0")+")":"tranzistor nije u zasićenju",r!=="sat"],
+   ["Pojačanje "+sub("A","u")+" (mali signal)",r==="sat"?nf(Au,1):"—","−"+sub("g","m")+"("+sub("R","T")+" ∥ "+sub("r","d")+")",r!=="sat"],
+   ["Izmjereno pojačanje",meas==null?"—":nf(meas,1),"−"+sub("U","izm")+" / "+sub("U","ulm"),false]
+  ];
+  $("facts").innerHTML=f.map(function(x){return '<div class="fact"><div class="k">'+x[0]+'</div><div class="val'+(x[3]?' bad':'')+'">'+x[1]+'</div><div class="f">'+x[2]+'</div></div>';}).join("");
+  var s=$("state"),clip=st.amp>0&&(region(st.ugq+st.amp,S.umin)!=="sat"||region(Math.max(0,st.ugq-st.amp),S.umax)!=="sat");
+  if(r==="off"){s.innerHTML="Tranzistor ne vodi ("+sub("U","GSQ")+" ≤ "+sub("U","GS0")+") → "+sub("u","IZ")+" = "+sub("U","DD");s.className="state off";}
+  else if(r==="tri"){s.innerHTML="Radna točka u triodnom području → malo pojačanje";s.className="state tri";}
+  else if(clip){s.innerHTML="Signal je prevelik: tranzistor izlazi iz zasićenja → izobličenje";s.className="state warn";}
+  else{s.innerHTML="Zasićenje → tranzistor pojačava; izlaz je u protufazi s ulazom";s.className="state sat";}
+  $("sch").classList.toggle("on",r!=="off");
+  $("tUdd").textContent=nf(st.udd,1)+" V";
+}
+function drawNow(){
+  var i=Math.max(0,Math.min(N,Math.round(st.t*N))),x=gT._X(i);
+  cT.setAttribute("x1",x);cT.setAttribute("x2",x);
+  dU.setAttribute("cx",x);dU.setAttribute("cy",gT._Y(S.u[i]));dV.setAttribute("cx",x);dV.setAttribute("cy",gT._Y(S.v[i]));
+  var ug=st.ugq+S.u[i],uo=S.uq+S.v[i],iD=id(ug,uo);
+  dOp.setAttribute("cx",gO._X(uo));dOp.setAttribute("cy",gO._Y(iD));
+  dPp.setAttribute("cx",gP._X(ug));dPp.setAttribute("cy",gP._Y(uo));
+  $("aI").style.opacity=iD>1e-6?1:.15;
+  $("now").innerHTML=[sub("u","UL")+" = <b>"+nf(ug,2)+" V</b>",sub("i","D")+" = <b>"+fI(iD)+"</b>",sub("u","IZ")+" = <b>"+nf(uo,2)+" V</b>"].map(function(s){return "<span>"+s+"</span>";}).join("");
+}
+function all(){
+  $("uddO").textContent=nf(st.udd,1)+" V";$("rtO").textContent=fR(st.rt);$("ugqO").textContent=nf(st.ugq,2)+" V";$("ampO").textContent=nf(st.amp*1000,0)+" mV";$("kkO").textContent=nf(st.K,1)+" mA/V²";$("vtO").textContent=nf(st.vt,1)+" V";$("lamO").textContent=nf(st.lam,3)+" V⁻¹";
+  simulate();drawO();drawP();drawT();facts();drawNow();
+}
+function rtFrom(v){return 0.5*Math.pow(20,v/1000);}
+[["udd","udd"],["ugq","ugq"],["amp","amp"],["kk","K"],["vt","vt"],["lam","lam"]].forEach(function(p){$(p[0]).addEventListener("input",function(e){st[p[1]]=parseFloat(e.target.value);all();});});
+$("rt").addEventListener("input",function(e){st.rt=rtFrom(+e.target.value);all();});
+var last=0;
+function loop(ts){if(!st.play)return;if(last)st.t=(st.t+(ts-last)/8000)%1;last=ts;drawNow();requestAnimationFrame(loop);}
+$("play").addEventListener("click",function(){st.play=!st.play;this.textContent=st.play?"Zaustavi":"Pokreni";last=0;if(st.play)requestAnimationFrame(loop);});
+(function(){var drag=false;function seek(e){var r=gT.getBoundingClientRect(),vx=(e.clientX-r.left)*640/r.width;st.t=Math.max(0,Math.min(1,(vx-gT._ox)/gT._W));drawNow();}
+gT.addEventListener("pointerdown",function(e){drag=true;gT.setPointerCapture(e.pointerId);seek(e);});gT.addEventListener("pointermove",function(e){if(drag)seek(e);});gT.addEventListener("pointerup",function(){drag=false;});})();
+st.rt=rtFrom(+$("rt").value);
+all();
+})();
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ Interaktivni simulatori elektroničkih sklopova izrađeni kao nastavni materijal
 | **Ispravljači** | Poluvalni, punovalni sa srednjim izvodom, mosni i poluvalni ispravljač s kapacitivnim filtrom. Prikaz ulaznog i izlaznog napona, struja dioda, srednje i efektivne vrijednosti, faktora valovitosti i zapornog napona diode. | [Otvori](https://jkonjevod.github.io/Elektronika-simulatori-za-e-ucenje/ispravljaci_simulator.html) |
 | **Stabilizator sa Zenerovom diodom** | Karakteristika Zenerove diode s radnim pravcem, utjecaj ulaznog napona, predotpora i trošila, potiskivanje valovitosti te granice I<sub>Zmin</sub> i P<sub>Zmax</sub>. | [Otvori](https://jkonjevod.github.io/Elektronika-simulatori-za-e-ucenje/zener_stabilizator_simulator.html) |
 | **n-kanalni MOSFET** | Presjek tranzistora s induciranim kanalom, izlazne i prijenosna karakteristika, područja rada (zapiranje, triodno, zasićenje), strmina *g*<sub>m</sub> i izlazni otpor *r*<sub>d</sub>. | [Otvori](https://jkonjevod.github.io/Elektronika-simulatori-za-e-ucenje/mosfet_simulator.html) |
+| **p-kanalni MOSFET** | Presjek s induciranim p-kanalom (šupljine), izlazne i prijenosna karakteristika s negativnim naponima i strujom, područja rada te usporedba s n-kanalnim tranzistorom. | [Otvori](https://jkonjevod.github.io/Elektronika-simulatori-za-e-ucenje/mosfet_p_simulator.html) |
 ## Kako se koriste
 
 - **Klizačima** se mijenjaju parametri sklopa (napon, otpor, kapacitet …), a grafovi i izračunate vrijednosti mijenjaju se odmah.

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>p-kanalni MOSFET – simulator</title>
+<style>
+:root{--bg:#FFFFFF;--ink:#1d1d1d;--muted:#757575;--line:#D9DCE3;--blue:#164194;--blue-soft:#EEF2FA;--n:#D3DDF2;--gold:#B19E3F;--gold-soft:#F6F2DF;--ox:#CFCFCF;--dep:#C9C9C9;--red:#C00000;--red-soft:#FBEAEA;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--n:#2A3658;--gold:#D4C06A;--gold-soft:#2D2A1A;--ox:#55595F;--dep:#3B3F46;--red:#FF7A7A;--red-soft:#3A1E1E}}
+:root[data-theme="dark"]{--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--n:#2A3658;--gold:#D4C06A;--gold-soft:#2D2A1A;--ox:#55595F;--dep:#3B3F46;--red:#FF7A7A;--red-soft:#3A1E1E}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Liberation Sans",Helvetica,sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 28px 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:28px;align-items:start}
+svg{display:block;width:100%;height:auto;max-width:100%}
+svg text{font-family:Arial,"Liberation Sans",sans-serif}
+svg text.v,.vi{font-family:"Times New Roman","Liberation Serif",serif;font-style:italic}
+svg text.v tspan{font-style:normal}
+.vi{font-size:1.12em}
+.now{display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:center;margin-top:8px;font-size:17px;color:var(--muted)}
+.now b{color:var(--ink);font-variant-numeric:tabular-nums}
+.state{display:block;margin:10px auto 0;max-width:560px;text-align:center;font-size:16px;font-weight:bold;padding:8px 12px;border-radius:8px}
+.state.off{color:var(--muted);background:var(--line)}
+.state.tri{color:var(--blue);background:var(--blue-soft)}
+.state.sat{color:var(--gold);background:var(--gold-soft)}
+.gt{font-size:15px;color:var(--muted);margin:0 0 2px 4px}
+.leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);margin:0 0 2px 4px}
+.leg>span{display:inline-flex;align-items:center;gap:6px}
+.leg i.sw{display:inline-block;width:20px;border-top-width:3px;border-top-style:solid}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px 22px;align-items:end;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-size:16px;color:var(--muted);margin-bottom:8px}
+.ctl label output{color:var(--blue);font-weight:bold;font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.facts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:16px}
+.fact{padding:4px 16px;border-left:1px solid var(--line)}
+.fact:first-child{border-left:0;padding-left:0}
+.fact .k{font-size:14px;color:var(--muted);margin-bottom:4px;min-height:2.4em}
+.fact .val{font-size:26px;font-weight:bold;color:var(--blue);font-variant-numeric:tabular-nums}
+.fact .f{font-size:13px;color:var(--muted);margin-top:2px}
+@media (max-width:900px){.stage{grid-template-columns:1fr}.facts{grid-template-columns:1fr 1fr;row-gap:14px}.fact{border-left:0;padding-left:0}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1 class="sr">p-kanalni MOSFET obogaćenog tipa – interaktivni prikaz</h1>
+<div class="stage">
+<section aria-label="Presjek tranzistora">
+<svg id="xs" viewBox="0 0 1000 560" role="img" aria-label="Presjek p-kanalnog MOSFET-a s kanalom koji ovisi o naponima">
+<defs>
+<marker id="ga" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--gold)"/></marker>
+<marker id="gm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker>
+<clipPath id="chClip"><path id="chClipPath" d=""/></clipPath>
+</defs>
+<rect x="100" y="230" width="800" height="250" fill="var(--n)" stroke="var(--blue)" stroke-width="2.5"/>
+<text x="440" y="455" font-size="26" fill="var(--blue)" font-weight="bold"><tspan font-style="italic">n</tspan>-podloga</text>
+<path id="dep" d="" fill="var(--dep)"/>
+<path d="M144,230 L144,300 Q144,351 195,351 L305,351 Q356,351 356,300 L356,230 Z" fill="var(--dep)"/>
+<path d="M644,230 L644,300 Q644,351 695,351 L805,351 Q856,351 856,300 L856,230 Z" fill="var(--dep)"/>
+<path d="M160,230 L160,300 Q160,335 195,335 L305,335 Q340,335 340,300 L340,230 Z" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2.5"/>
+<path d="M660,230 L660,300 Q660,335 695,335 L805,335 Q840,335 840,300 L840,230 Z" fill="var(--gold-soft)" stroke="var(--gold)" stroke-width="2.5"/>
+<text x="232" y="298" font-size="28" fill="var(--gold)" font-weight="bold"><tspan font-style="italic">p</tspan><tspan font-size="18" dy="-12">+</tspan></text>
+<text x="768" y="298" font-size="28" fill="var(--gold)" font-weight="bold"><tspan font-style="italic">p</tspan><tspan font-size="18" dy="-12">+</tspan></text>
+<path id="ch" d="" fill="var(--gold)"/>
+<g id="el" clip-path="url(#chClip)"></g>
+<text id="pinch" x="705" y="392" font-size="17" fill="var(--red)" text-anchor="middle" font-weight="bold" opacity="0">prigušenje</text>
+<path id="pinchL" d="M698,374 L656,242" stroke="var(--red)" stroke-width="1.5" opacity="0"/>
+<rect x="320" y="212" width="360" height="18" fill="var(--ox)" stroke="var(--muted)" stroke-width="1.5"/>
+<rect x="330" y="182" width="340" height="30" rx="2" fill="var(--blue)"/>
+<rect x="190" y="214" width="100" height="16" fill="var(--blue)"/>
+<rect x="710" y="214" width="100" height="16" fill="var(--blue)"/>
+<rect x="100" y="480" width="800" height="16" fill="var(--blue)"/>
+<g stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" fill="none">
+<path d="M240,214 L240,79 M500,182 L500,79 M760,214 L760,79 M231,70 L180,70 L180,76 M500,496 L500,512"/>
+<path d="M180,76 L180,94 M158,94 L202,94 M166,103 L194,103 M174,112 L186,112"/>
+<path d="M500,530 L500,540 M478,540 L522,540 M486,549 L514,549 M494,558 L506,558"/>
+</g>
+<circle cx="240" cy="70" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<circle cx="500" cy="70" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<circle cx="760" cy="70" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<circle cx="500" cy="521" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="258" y="80" font-size="30" fill="var(--blue)" font-weight="bold">S</text>
+<text x="518" y="80" font-size="30" fill="var(--blue)" font-weight="bold">G</text>
+<text x="778" y="80" font-size="30" fill="var(--blue)" font-weight="bold">D</text>
+<text x="520" y="530" font-size="26" fill="var(--blue)" font-weight="bold">B</text>
+<text id="tUgs" x="500" y="30" class="v" font-size="26" fill="var(--blue)" text-anchor="middle"></text>
+<text id="tUds" x="760" y="30" class="v" font-size="26" fill="var(--blue)" text-anchor="middle"></text>
+<g id="aD"><line x1="788" y1="104" x2="788" y2="152" stroke="var(--gold)" stroke-width="3.2" marker-end="url(#ga)"/><text x="802" y="140" class="v" font-size="26" fill="var(--gold)">I<tspan font-size="16" dy="6">D</tspan></text></g>
+<g><line x1="528" y1="104" x2="528" y2="152" stroke="var(--muted)" stroke-width="2.4" marker-end="url(#gm)"/><text x="542" y="140" class="v" font-size="24" fill="var(--muted)">I<tspan font-size="15" dy="6">G</tspan><tspan dy="-6"> = 0</tspan></text></g>
+<text id="chLab" x="480" y="400" font-size="20" fill="var(--gold)" text-anchor="middle" font-weight="bold"></text>
+</svg>
+<div class="now" id="now" aria-live="polite"></div>
+<span class="state" id="state"></span>
+</section>
+<section aria-label="Karakteristike">
+<div class="gt">Izlazne karakteristike <span class="vi">i</span><sub>D</sub>(<span class="vi">u</span><sub>DS</sub>)</div>
+<div class="leg"><span><i class="sw" style="border-color:var(--gold)"></i><span>odabrani <span class="vi">U</span><sub>GS</sub></span></span><span><i class="sw" style="border-color:var(--blue);opacity:.45"></i><span>ostali <span class="vi">U</span><sub>GS</sub></span></span><span><i class="sw" style="border-color:var(--muted);border-top-style:dashed"></i><span>granica: <span class="vi">u</span><sub>DS</sub> = <span class="vi">u</span><sub>GS</sub> − <span class="vi">U</span><sub>GS0</sub></span></span></div>
+<svg id="gO" viewBox="0 0 720 290" role="img" aria-label="Izlazne karakteristike s radnom točkom" style="touch-action:none;cursor:crosshair"></svg>
+<div class="gt" style="margin-top:8px">Prijenosna karakteristika <span class="vi">i</span><sub>D</sub>(<span class="vi">u</span><sub>GS</sub>) u zasićenju (svi naponi i struja su negativni)</div>
+<svg id="gP" viewBox="0 0 720 226" role="img" aria-label="Prijenosna karakteristika s radnom točkom"></svg>
+</section>
+</div>
+<div class="controls">
+<div class="ctl"><label for="ugs"><span>Napon <span class="vi">U</span><sub>GS</sub></span><output id="ugsO"></output></label><input id="ugs" type="range" min="-6" max="0" step="0.05" value="-3"></div>
+<div class="ctl"><label for="uds"><span>Napon <span class="vi">U</span><sub>DS</sub></span><output id="udsO"></output></label><input id="uds" type="range" min="-10" max="0" step="0.05" value="-5"></div>
+<div class="ctl"><label for="vt"><span>Napon praga <span class="vi">U</span><sub>GS0</sub></span><output id="vtO"></output></label><input id="vt" type="range" min="-3" max="-0.5" step="0.1" value="-1"></div>
+<div class="ctl"><label for="kk"><span>Parametar <span class="vi">K</span></span><output id="kkO"></output></label><input id="kk" type="range" min="0.5" max="5" step="0.1" value="2"></div>
+<div class="ctl"><label for="lam"><span>Parametar <span class="vi">λ</span></span><output id="lamO"></output></label><input id="lam" type="range" min="0" max="0.05" step="0.005" value="0.02"></div>
+</div>
+<div class="facts" id="facts"></div>
+</main>
+<script>
+(function(){
+var NS="http://www.w3.org/2000/svg";
+var st={ugs:3,uds:5,vt:1,K:2,lam:0.02};
+var UGSMAX=6,UDSMAX=10;
+var $=function(id){return document.getElementById(id);};
+var nf=function(x,d){return (Math.abs(x)<1e-9?0:x).toLocaleString("hr-HR",{minimumFractionDigits:0,maximumFractionDigits:d});};
+var ng=function(x,d){return x>1e-9?"−"+nf(x,d):"0";};
+var sub=function(b,s){return '<span class="vi">'+b+'</span><sub>'+s+'</sub>';};
+function fI(m){if(Math.abs(m)<0.001)return nf(m*1e6,0)+" nA";if(Math.abs(m)<1)return nf(m*1000,0)+" µA";return nf(m,2)+" mA";}
+function fR(k){if(!isFinite(k))return "∞";if(k>=1)return nf(k,k<10?2:1)+" kΩ";return nf(k*1000,0)+" Ω";}
+/* model (mA, V, mA/V^2) */
+function id(ugs,uds){var vo=ugs-st.vt;if(vo<=0||uds<=0)return 0;var m=1+st.lam*uds;
+  if(uds<vo)return st.K*(vo*uds-uds*uds/2)*m; return st.K/2*vo*vo*m;}
+function region(ugs,uds){var vo=ugs-st.vt;if(vo<=0)return "off";return uds<vo?"tri":"sat";}
+function el(g,n,a,t){var e=document.createElementNS(NS,n);for(var i in a)e.setAttribute(i,a[i]);if(t!=null)e.textContent=t;g.appendChild(e);return e;}
+function nice(x){var p=Math.pow(10,Math.floor(Math.log10(x))),m=x/p;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p;}
+function axes(g,ox,oy,W,top,xl,xs,yl,ys){
+  el(g,"path",{d:"M"+(ox-6)+","+oy+" L"+(ox+W+12)+","+oy,stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox+W+12)+","+(oy-6)+" L"+(ox+W+24)+","+oy+" L"+(ox+W+12)+","+(oy+6)+" Z",fill:"var(--muted)"});
+  el(g,"path",{d:"M"+ox+","+(oy+6)+" L"+ox+","+(top+10),stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox-6)+","+(top+12)+" L"+ox+","+top+" L"+(ox+6)+","+(top+12)+" Z",fill:"var(--muted)"});
+  var t=el(g,"text",{x:ox+W+24,y:oy+34,"font-size":19,fill:"var(--muted)",class:"v","text-anchor":"end"});t.innerHTML=xl+'<tspan font-size="12" dy="5">'+xs+'</tspan><tspan dy="-5" font-style="normal" font-size="12" font-family="Arial"> (V)</tspan>';
+  var u=el(g,"text",{x:ox-10,y:top+16,"font-size":19,fill:"var(--muted)",class:"v","text-anchor":"end"});u.innerHTML=yl+'<tspan font-size="12" dy="5">'+ys+'</tspan>';
+  el(g,"text",{x:ox+8,y:top+14,"font-size":12,fill:"var(--muted)"},"mA");
+}
+function imax(){return Math.max(1,nice(st.K/2*Math.pow(UGSMAX-st.vt,2)*(1+st.lam*UDSMAX)*1.05));}
+/* output characteristics */
+var gO=$("gO"),gP=$("gP");
+function axesP(g,ox,y0,W,Hh,xs,ys){
+  el(g,"path",{d:"M"+(ox-6)+","+y0+" L"+(ox+W+16)+","+y0,stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox+W+16)+","+(y0-6)+" L"+(ox+W+28)+","+y0+" L"+(ox+W+16)+","+(y0+6)+" Z",fill:"var(--muted)"});
+  el(g,"path",{d:"M"+(ox+W)+","+(y0+Hh+6)+" L"+(ox+W)+","+(y0-14),stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox+W-6)+","+(y0-12)+" L"+(ox+W)+","+(y0-24)+" L"+(ox+W+6)+","+(y0-12)+" Z",fill:"var(--muted)"});
+  var t=el(g,"text",{x:ox+W+30,y:y0+24,"font-size":19,fill:"var(--muted)",class:"v","text-anchor":"end"});t.innerHTML='u<tspan font-size="12" dy="5">'+xs+'</tspan><tspan dy="-5" font-style="normal" font-size="12" font-family="Arial"> (V)</tspan>';
+  var u=el(g,"text",{x:ox+W+12,y:y0-8,"font-size":19,fill:"var(--muted)",class:"v"});u.innerHTML='i<tspan font-size="12" dy="5">D</tspan><tspan dy="-5" font-style="normal" font-size="12" font-family="Arial"> (mA)</tspan>';
+}
+function drawO(){
+  gO.innerHTML="";var ox=24,y0=40,W=600,Hh=236,IM=imax();
+  var X=function(v){return ox+W-W*v/UDSMAX;},Y=function(i){return y0+Hh*i/IM;};
+  var si=nice(IM/5);
+  for(var i=si;i<IM*0.999;i+=si){el(gO,"line",{x1:ox,y1:Y(i),x2:ox+W,y2:Y(i),stroke:"var(--line)","stroke-width":1});el(gO,"text",{x:ox+W+8,y:Y(i)+5,"font-size":13,fill:"var(--muted)"},ng(i,1));}
+  for(var v=2;v<=UDSMAX;v+=2){el(gO,"line",{x1:X(v),y1:y0,x2:X(v),y2:y0+Hh,stroke:"var(--line)","stroke-width":1});el(gO,"text",{x:X(v),y:y0-8,"text-anchor":"middle","font-size":13,fill:"var(--muted)"},ng(v,0));}
+  axesP(gO,ox,y0,W,Hh,"DS","D");
+  var d="";for(var k=0;k<=120;k++){var u=UDSMAX*k/120,ii=st.K/2*u*u*(1+st.lam*u);if(ii>IM)break;d+=(k?"L":"M")+X(u).toFixed(1)+","+Y(ii).toFixed(1);}
+  el(gO,"path",{d:d,fill:"none",stroke:"var(--muted)","stroke-width":1.6,"stroke-dasharray":"6 5"});
+  for(var g=1;g<=6;g++){var ug=st.vt+g;if(ug>UGSMAX+0.01)break;if(Math.abs(ug-st.ugs)<0.05)continue;
+    var q="";for(k=0;k<=200;k++){var u2=UDSMAX*k/200;q+=(k?"L":"M")+X(u2).toFixed(1)+","+Y(id(ug,u2)).toFixed(1);}
+    el(gO,"path",{d:q,fill:"none",stroke:"var(--blue)","stroke-width":1.8,opacity:.45});
+    el(gO,"text",{x:ox+4,y:Y(id(ug,UDSMAX))+16,"font-size":12,fill:"var(--blue)",opacity:.75},ng(ug,1)+" V");}
+  if(st.ugs>st.vt){var q3="";for(k=0;k<=200;k++){var u3=UDSMAX*k/200;q3+=(k?"L":"M")+X(u3).toFixed(1)+","+Y(id(st.ugs,u3)).toFixed(1);}
+    el(gO,"path",{d:q3,fill:"none",stroke:"var(--gold)","stroke-width":4,"stroke-linejoin":"round"});}
+  else el(gO,"path",{d:"M"+X(0)+","+y0+" L"+X(UDSMAX)+","+y0,stroke:"var(--gold)","stroke-width":4});
+  var ip=id(st.ugs,st.uds);
+  el(gO,"line",{x1:X(st.uds),y1:y0,x2:X(st.uds),y2:Y(ip),stroke:"var(--ink)","stroke-width":1,opacity:.35,"stroke-dasharray":"3 3"});
+  el(gO,"circle",{cx:X(st.uds),cy:Y(ip),r:7.5,fill:"var(--gold)",stroke:"var(--bg)","stroke-width":2.5});
+  el(gO,"text",{x:X(0.3),y:y0+Hh-8,"font-size":13,fill:"var(--muted)","text-anchor":"end"},"triodno");
+  el(gO,"text",{x:ox+6,y:y0+Hh-8,"font-size":13,fill:"var(--muted)"},"zasićenje");
+  gO._ox=ox;gO._W=W;
+}
+function drawP(){
+  gP.innerHTML="";var ox=24,y0=36,W=600,Hh=180,IM=imax();
+  var X=function(v){return ox+W-W*v/UGSMAX;},Y=function(i){return y0+Hh*i/IM;};
+  var si=nice(IM/4);
+  for(var i=si;i<IM*0.999;i+=si){el(gP,"line",{x1:ox,y1:Y(i),x2:ox+W,y2:Y(i),stroke:"var(--line)","stroke-width":1});el(gP,"text",{x:ox+W+8,y:Y(i)+5,"font-size":13,fill:"var(--muted)"},ng(i,1));}
+  for(var v=1;v<=UGSMAX;v+=1){el(gP,"text",{x:X(v),y:y0-8,"text-anchor":"middle","font-size":13,fill:"var(--muted)"},ng(v,0));}
+  axesP(gP,ox,y0,W,Hh,"GS","D");
+  el(gP,"line",{x1:X(st.vt),y1:y0,x2:X(st.vt),y2:y0+Hh,stroke:"var(--red)","stroke-width":1.4,"stroke-dasharray":"5 5"});
+  var t=el(gP,"text",{x:X(st.vt)+6,y:y0+Hh-6,"font-size":17,fill:"var(--red)",class:"v"});t.innerHTML='U<tspan font-size="11" dy="4">GS0</tspan>';
+  var q="";for(var k=0;k<=240;k++){var u=UGSMAX*k/240,vo=u-st.vt,ii=vo>0?st.K/2*vo*vo*(1+st.lam*st.uds):0;q+=(k?"L":"M")+X(u).toFixed(1)+","+Y(Math.min(ii,IM)).toFixed(1);}
+  el(gP,"path",{d:q,fill:"none",stroke:"var(--gold)","stroke-width":4,"stroke-linejoin":"round"});
+  var vo2=st.ugs-st.vt,isat=vo2>0?st.K/2*vo2*vo2*(1+st.lam*st.uds):0,r=region(st.ugs,st.uds);
+  el(gP,"circle",{cx:X(st.ugs),cy:Y(isat),r:7.5,fill:r==="sat"||r==="off"?"var(--gold)":"var(--bg)",stroke:r==="tri"?"var(--gold)":"var(--bg)","stroke-width":2.5});
+  if(r==="tri")el(gP,"text",{x:X(st.ugs)-12,y:Y(isat)+24,"font-size":12,fill:"var(--muted)","text-anchor":"end"},"(tranzistor nije u zasićenju)");
+}
+/* cross-section */
+var CH0=340,CH1=660,TOP=230,TMAX=64,phase=0;
+var dots=[];for(var n=0;n<46;n++)dots.push({x:Math.random(),y:Math.random()});
+function chanProfile(){
+  var vo=st.ugs-st.vt;if(vo<=0)return null;
+  var vds=Math.min(st.uds,vo),pts=[],N=60;
+  for(var k=0;k<=N;k++){var x=k/N;var q2=vo*vo-x*(vo*vo-Math.pow(vo-vds,2));var q=Math.sqrt(Math.max(0,q2));pts.push([x,q]);}
+  return pts;
+}
+function drawX(){
+  var vo=st.ugs-st.vt,pr=chanProfile(),scale=TMAX/(UGSMAX-0.5);
+  var r=region(st.ugs,st.uds);
+  if(!pr){$("ch").setAttribute("d","");$("chClipPath").setAttribute("d","");$("dep").setAttribute("d","");$("chLab").textContent="nema kanala";$("chLab").setAttribute("fill","var(--muted)");}
+  else{
+    var top="M"+CH0+","+TOP+" L"+CH1+","+TOP,bot="",depb="";
+    for(var k=pr.length-1;k>=0;k--){var x=CH0+(CH1-CH0)*pr[k][0],t=Math.max(r==="sat"&&k===pr.length-1?0:1.5,pr[k][1]*scale);bot+=" L"+x.toFixed(1)+","+(TOP+t).toFixed(1);}
+    var d=top+bot+" Z";$("ch").setAttribute("d",d);$("chClipPath").setAttribute("d",d);
+    var dd="M"+(CH0-6)+","+TOP+" L"+(CH1+6)+","+TOP;for(k=pr.length-1;k>=0;k--){var x2=CH0+(CH1-CH0)*pr[k][0];dd+=" L"+x2.toFixed(1)+","+(TOP+pr[k][1]*scale+16+6*pr[k][0]*Math.min(st.uds,8)/8).toFixed(1);}
+    $("dep").setAttribute("d",dd+" Z");
+    $("chLab").textContent="inducirani p-kanal (šupljine)";$("chLab").setAttribute("fill","var(--gold)");
+  }
+  var sat=r==="sat";$("pinch").setAttribute("opacity",sat?1:0);$("pinchL").setAttribute("opacity",sat?1:0);
+  var t1=$("tUgs");t1.innerHTML='u<tspan font-size="16" dy="6">GS</tspan><tspan dy="-6"> = '+ng(st.ugs,2)+' V</tspan>';
+  var t2=$("tUds");t2.innerHTML='u<tspan font-size="16" dy="6">DS</tspan><tspan dy="-6"> = '+ng(st.uds,2)+' V</tspan>';
+  $("aD").style.opacity=id(st.ugs,st.uds)>1e-6?1:.12;
+}
+function drawDots(){
+  var g=$("el");g.innerHTML="";var pr=chanProfile();if(!pr)return;var scale=TMAX/(UGSMAX-0.5);
+  dots.forEach(function(d){var xx=(d.x+phase)%1,k=Math.round(xx*(pr.length-1)),t=pr[k][1]*scale;
+    el(g,"circle",{cx:CH0+(CH1-CH0)*xx,cy:TOP+2+Math.max(0,t-4)*d.y,r:3.4,fill:"var(--bg)",stroke:"var(--blue)","stroke-width":1.6});});
+}
+function facts(){
+  var vo=st.ugs-st.vt,r=region(st.ugs,st.uds),i=id(st.ugs,st.uds),gm,rd;
+  if(r==="off"){gm=0;rd=Infinity;}
+  else if(r==="sat"){gm=st.K*vo*(1+st.lam*st.uds);rd=st.lam>0?1/(st.lam*st.K/2*vo*vo):Infinity;}
+  else{gm=st.K*st.uds;rd=1/(st.K*(vo-st.uds));}
+  var rds=vo>0?1/(st.K*vo):Infinity;
+  var f=[
+   ["Struja odvoda "+sub("I","D"),(i>1e-9?"−":"")+fI(i),{off:"zapiranje: "+sub("i","D")+" = 0",tri:"triodno područje",sat:sub("K","")+"/2 ("+sub("u","GS")+" − "+sub("U","GS0")+")²"}[r]],
+   ["Napon prekoračenja",ng(Math.max(0,vo),2)+" V",sub("u","GS")+" − "+sub("U","GS0")+" = granični "+sub("u","DS")],
+   ["Otpor kanala pri malom "+sub("u","DS"),fR(rds),sub("R","DS")+" = 1 / ["+sub("K","")+"("+sub("u","GS")+" − "+sub("U","GS0")+")]"],
+   ["Strmina "+sub("g","m"),nf(gm,2)+" mA/V",r==="sat"?sub("K","")+"("+sub("U","GS")+" − "+sub("U","GS0")+")":"mijenja se s radnom točkom"],
+   ["Izlazni otpor "+sub("r","d"),fR(rd),r==="sat"?"≈ 1 / (λ"+sub("I","D")+")":"nagib izlazne karakteristike"]
+  ];
+  $("facts").innerHTML=f.map(function(x){return '<div class="fact"><div class="k">'+x[0]+'</div><div class="val">'+x[1]+'</div><div class="f">'+x[2]+'</div></div>';}).join("");
+  $("now").innerHTML=[sub("u","GS")+" = <b>"+ng(st.ugs,2)+" V</b>",sub("u","DS")+" = <b>"+ng(st.uds,2)+" V</b>",sub("i","D")+" = <b>"+(i>1e-9?"−":"")+fI(i)+"</b>",sub("I","G")+" = <b>0</b>"].map(function(s){return "<span>"+s+"</span>";}).join("");
+  var s=$("state");
+  if(r==="off"){s.innerHTML="Područje zapiranja: "+sub("u","GS")+" ≥ "+sub("U","GS0")+" → nema kanala, struja ne teče";s.className="state off";}
+  else if(r==="tri"){s.innerHTML="Triodno područje: "+sub("u","GS")+" − "+sub("U","GS0")+" < "+sub("u","DS")+" ≤ 0 → kanal se ponaša kao otpornik upravljan naponom "+sub("u","GS");s.className="state tri";}
+  else{s.innerHTML="Područje zasićenja: kanal je prigušen uz odvod → struja gotovo ne ovisi o "+sub("u","DS");s.className="state sat";}
+}
+function all(){
+  $("ugsO").textContent=ng(st.ugs,2)+" V";$("udsO").textContent=ng(st.uds,2)+" V";$("vtO").textContent=ng(st.vt,1)+" V";$("kkO").textContent="−"+nf(st.K,1)+" mA/V²";$("lamO").textContent=nf(st.lam,3)+" V⁻¹";
+  drawO();drawP();drawX();drawDots();facts();
+}
+[["ugs","ugs"],["uds","uds"],["vt","vt"],["kk","K"],["lam","lam"]].forEach(function(p){$(p[0]).addEventListener("input",function(e){st[p[1]]=Math.abs(parseFloat(e.target.value));all();});});
+// klik/povlačenje po izlaznim karakteristikama postavlja u_DS
+(function(){var drag=false;function seek(e){var r=gO.getBoundingClientRect(),vx=(e.clientX-r.left)*720/r.width;var u=(gO._ox+gO._W-vx)/gO._W*UDSMAX;st.uds=Math.max(0,Math.min(UDSMAX,Math.round(u*20)/20));$("uds").value=-st.uds;all();}
+gO.addEventListener("pointerdown",function(e){drag=true;gO.setPointerCapture(e.pointerId);seek(e);});gO.addEventListener("pointermove",function(e){if(drag)seek(e);});gO.addEventListener("pointerup",function(){drag=false;});})();
+// tok elektrona
+var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches,last=0;
+function loop(ts){if(last){var i=id(st.ugs,st.uds);phase=(phase+(ts-last)/1000*Math.min(0.6,0.04+i/40))%1;drawDots();}last=ts;requestAnimationFrame(loop);}
+all();if(!reduce)requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Analiza pojačala u spoju ZU – simulator</title>
+<style>
+:root{--bg:#FFFFFF;--ink:#1d1d1d;--muted:#757575;--line:#D9DCE3;--blue:#164194;--blue-soft:#EEF2FA;--gold:#B19E3F;--gold-soft:#F6F2DF;--red:#C00000;--red-soft:#FBEAEA;--off:#ECECEC;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E;--off:#24272E}}
+:root[data-theme="dark"]{--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E;--off:#24272E}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Liberation Sans",Helvetica,sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 28px 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.tabs button{border:2px solid var(--blue);background:transparent;color:var(--blue);font:inherit;font-size:15px;padding:8px 12px;border-radius:8px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--blue);color:var(--bg);font-weight:bold}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start}
+svg{display:block;width:100%;height:auto;max-width:100%}
+.vi{font-family:"Times New Roman","Liberation Serif",serif;font-style:italic;font-size:1.12em}
+.hide{display:none!important}
+.cap{font-size:15px;color:var(--muted);margin:10px 0 0;max-width:70ch}
+.cap b{color:var(--ink)}
+.state{display:block;margin:10px 0 0;text-align:center;font-size:15px;font-weight:bold;padding:8px 12px;border-radius:8px}
+.state.sat{color:var(--gold);background:var(--gold-soft)}
+.state.bad{color:var(--red);background:var(--red-soft)}
+.gt{font-size:15px;color:var(--muted);margin:4px 0 2px 4px}
+.leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--muted);margin:0 0 2px 4px}
+.leg>span{display:inline-flex;align-items:center;gap:6px}
+.leg i.sw{display:inline-block;width:22px;border-top-width:3px;border-top-style:solid}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:14px 22px;align-items:end;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--muted);margin-bottom:8px}
+.ctl label output{color:var(--blue);font-weight:bold;font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+.chk{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--ink);padding-bottom:6px;cursor:pointer}
+.chk input{width:22px;height:22px;accent-color:var(--blue)}
+.grp{grid-column:1/-1;font-size:14px;color:var(--muted);margin:4px 0 -6px;border-top:1px dashed var(--line);padding-top:10px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.col h2{margin:0 0 10px;font-size:18px;color:var(--blue)}
+.col h2 span{display:inline-block;min-width:26px;height:26px;line-height:26px;text-align:center;border-radius:50%;background:var(--blue);color:var(--bg);font-size:15px;margin-right:8px}
+.st{margin:0 0 10px;font-size:16px;line-height:1.9}
+.st .lbl{display:block;font-size:13px;color:var(--muted);line-height:1.3}
+.st b{color:var(--blue);font-variant-numeric:tabular-nums;white-space:nowrap}
+.st b.gd{color:var(--gold)}
+.st b.bd{color:var(--red)}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.15;margin:0 2px}
+.fr>span:first-child{border-bottom:1.5px solid currentColor;padding:0 3px}
+.fr>span:last-child{padding:0 3px}
+.warn{color:var(--red);font-weight:bold}
+.dim{opacity:.35}
+@media (max-width:1000px){.stage{grid-template-columns:1fr}.steps{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1 class="sr">Pojačalo s n-kanalnim MOSFET-om u spoju zajedničkog uvoda – statička i dinamička analiza</h1>
+<div class="stage">
+<section aria-label="Shema">
+<div class="tabs" role="tablist" aria-label="Prikaz sheme">
+<button role="tab" data-v="amp" aria-selected="true">Pojačalo</button>
+<button role="tab" data-v="sta" aria-selected="false">Statička analiza</button>
+<button role="tab" data-v="dyn" aria-selected="false">Dinamička analiza</button>
+<button role="tab" data-v="eq" aria-selected="false">Nadomjesna shema</button>
+</div>
+<div id="v_amp"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 820">
+
+<path d="M400,80 L834,80 M400,80 L400,140 M400,250 L400,422 M400,422 L400,540 M400,650 L400,730" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="384" y="140" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<rect x="384" y="540" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="843" cy="80" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="864" y="90" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">U</tspan><tspan font-size="19" dy="8" fill="var(--blue)">DD</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="430" y="205" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">1</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="430" y="605" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">2</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="684" cy="80" r="8" fill="var(--blue)"/>
+<path d="M80,730 L80,628 M80,552 L80,422 L120,422 M220,422 L283,422 M297,422 L606,422" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="80" cy="590" r="38" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<path d="M58,590 C66,564 74,564 80,590 C86,616 94,616 102,590" fill="none" stroke="var(--gold)" stroke-width="3.5"/>
+<text x="130" y="602" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">g</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<rect x="120" y="406" width="100" height="32" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="150" y="392" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">g</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<path d="M283,396 L283,448 M297,396 L297,448" fill="none" stroke="var(--blue)" stroke-width="5"/>
+<text x="266" y="380" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">C</tspan><tspan font-size="19" dy="8" fill="var(--blue)">G</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="400" cy="422" r="8" fill="var(--blue)"/>
+<text x="345" y="470" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="319" y="587" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">UL</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="345" y="708" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">−</text>
+<path d="M684,80 L684,140 M684,250 L684,338 L626,338 M684,300 L797,300 M811,300 L934,300 L934,430 M934,540 L934,730" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="668" y="140" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="714" y="205" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">D</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="684" cy="300" r="8" fill="var(--blue)"/>
+<path d="M797,274 L797,326 M811,274 L811,326" fill="none" stroke="var(--blue)" stroke-width="5"/>
+<text x="780" y="260" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">C</tspan><tspan font-size="19" dy="8" fill="var(--blue)">D</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="934" cy="300" r="8" fill="var(--blue)"/>
+<rect x="918" y="430" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="854" y="495" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">T</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<path d="M934,300 L1014,300" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="1023" cy="300" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="1023" y="360" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="1000" y="515" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">IZ</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="1023" y="708" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">−</text>
+<path d="M934,730 L1014,730" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="1023" cy="730" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<line x1="606" y1="328" x2="606" y2="432" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="626" y1="322" x2="626" y2="354" stroke="var(--blue)" stroke-width="5"/>
+<line x1="626" y1="366" x2="626" y2="394" stroke="var(--blue)" stroke-width="5"/>
+<line x1="626" y1="406" x2="626" y2="438" stroke="var(--blue)" stroke-width="5"/>
+<path d="M626,422 L684,422 L684,540 M684,650 L684,730 M644,380 L684,380 L684,422" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M628,380 L650,369 L650,391 Z" fill="var(--blue)"/>
+<circle cx="684" cy="422" r="8" fill="var(--blue)"/>
+<rect x="668" y="540" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="604" y="605" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">S</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<g id="gCS">
+<path d="M684,482 L804,482 L804,588 M804,602 L804,730" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="684" cy="482" r="8" fill="var(--blue)"/>
+<path d="M778,588 L830,588 M778,602 L830,602" fill="none" stroke="var(--blue)" stroke-width="5"/>
+<text x="840" y="607" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">C</tspan><tspan font-size="19" dy="8" fill="var(--blue)">S</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="804" cy="730" r="8" fill="var(--blue)"/>
+</g>
+<path d="M80,730 L934,730" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="400" cy="730" r="8" fill="var(--blue)"/>
+<circle cx="684" cy="730" r="8" fill="var(--blue)"/>
+<circle cx="934" cy="730" r="8" fill="var(--blue)"/>
+<path d="M684,730 L684,750 M660,750 L708,750 M669,760 L699,760 M678,770 L690,770" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg></div>
+<div id="v_sta" class="hide"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800">
+
+<defs><marker id="staga" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--gold)"/></marker><marker id="stagm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+<path d="M130,80 L664,80 M130,80 L130,140 M130,250 L130,412 L406,412 M130,412 L130,540 M130,650 L130,700 L484,700" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="114" y="140" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<rect x="114" y="540" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="673" cy="80" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="694" y="90" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">U</tspan><tspan font-size="19" dy="8" fill="var(--blue)">DD</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="484" cy="80" r="8" fill="var(--blue)"/>
+<circle cx="130" cy="412" r="8" fill="var(--blue)"/>
+<circle cx="484" cy="700" r="8" fill="var(--blue)"/>
+<text x="52" y="205" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">1</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="52" y="605" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">2</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<path d="M484,80 L484,140 M484,250 L484,328 L426,328" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="468" y="140" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="514" y="205" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">D</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<line x1="434" y1="155" x2="434" y2="235" stroke="var(--gold)" stroke-width="3.2" marker-end="url(#staga)"/>
+<text x="354" y="205" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--gold)">I</tspan><tspan font-size="19" dy="8" fill="var(--gold)">DQ</tspan><tspan dy="-8" fill="var(--gold)"></tspan></text>
+<line x1="406" y1="318" x2="406" y2="422" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="426" y1="312" x2="426" y2="344" stroke="var(--blue)" stroke-width="5"/>
+<line x1="426" y1="356" x2="426" y2="384" stroke="var(--blue)" stroke-width="5"/>
+<line x1="426" y1="396" x2="426" y2="428" stroke="var(--blue)" stroke-width="5"/>
+<path d="M426,412 L484,412 L484,540 M484,650 L484,700 M444,370 L484,370 L484,412" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M428,370 L450,359 L450,381 Z" fill="var(--blue)"/>
+<text x="508" y="382" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">T</tspan><tspan font-size="19" dy="8" fill="var(--blue)">1</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="484" cy="412" r="8" fill="var(--blue)"/>
+<rect x="468" y="540" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="514" y="605" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">S</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<path d="M484,700 L484,720 M460,720 L508,720 M469,730 L499,730 M478,740 L490,740" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="280" y="456" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="280" y="502" font-family="Times New Roman, Liberation Serif, serif" font-size="32" text-anchor="middle"><tspan font-style="italic" fill="var(--blue)">U</tspan><tspan font-size="19" dy="8" fill="var(--blue)">GSQ</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="454" y="472" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">−</text>
+<text x="614" y="300" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="584" y="382" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">U</tspan><tspan font-size="19" dy="8" fill="var(--blue)">DSQ</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="614" y="452" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)" text-anchor="middle">−</text>
+<text id="vIDQ" x="354" y="246" font-size="22" font-weight="bold" fill="var(--gold)" font-family="Arial"></text>
+<text id="vUGSQ" x="280" y="530" font-size="22" font-weight="bold" fill="var(--blue)" text-anchor="middle" font-family="Arial"></text>
+<text id="vUDSQ" x="584" y="418" font-size="22" font-weight="bold" fill="var(--blue)" font-family="Arial"></text>
+<text id="vUGG" x="150" y="398" font-size="20" font-weight="bold" fill="var(--blue)" font-family="Arial"></text>
+</svg></div>
+<div id="v_dyn" class="hide"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 740">
+
+<defs><marker id="dyngm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+<path d="M90,560 L90,489 M90,413 L90,342 L150,342 M250,342 L686,342 M430,342 L430,396 M430,506 L430,560" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="90" cy="451" r="38" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<path d="M68,451 C76,425 84,425 90,451 C96,477 104,477 112,451" fill="none" stroke="var(--gold)" stroke-width="3.5"/>
+<text x="60" y="403" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)">+</text>
+<text x="140" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">g</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<rect x="150" y="326" width="100" height="32" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="180" y="312" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">g</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<rect x="414" y="396" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="460" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">G</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="430" cy="342" r="8" fill="var(--blue)"/>
+<circle cx="430" cy="560" r="8" fill="var(--blue)"/>
+<text x="350" y="390" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="322" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">UL</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="350" y="538" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">−</text>
+<text x="610" y="390" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="584" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">gs</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="610" y="538" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">−</text>
+<path d="M260,650 L260,500 L310,500" fill="none" stroke="var(--muted)" stroke-width="2.6" marker-end="url(#dyngm)"/>
+<text x="270" y="680" font-family="Times New Roman, Liberation Serif, serif" font-size="30"><tspan font-style="italic" fill="var(--muted)">R</tspan><tspan font-size="18" dy="7" fill="var(--muted)">UL</tspan><tspan dy="-7" fill="var(--muted)"></tspan></text>
+<path d="M90,560 L1320,560" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="686" y1="248" x2="686" y2="352" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="706" y1="242" x2="706" y2="274" stroke="var(--blue)" stroke-width="5"/>
+<line x1="706" y1="286" x2="706" y2="314" stroke="var(--blue)" stroke-width="5"/>
+<line x1="706" y1="326" x2="706" y2="358" stroke="var(--blue)" stroke-width="5"/>
+<path d="M706,342 L764,342 M724,300 L764,300 L764,342 M706,258 L764,258 L764,130 L1320,130" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M708,300 L730,289 L730,311 Z" fill="var(--blue)"/>
+<text x="784" y="312" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">T</tspan><tspan font-size="19" dy="8" fill="var(--blue)">1</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="764" cy="560" r="8" fill="var(--blue)"/>
+<g id="dW"><path d="M764,342 L764,560" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g id="dR" style="display:none"><path d="M764,342 L764,430 M764,540 L764,560" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="748" y="430" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="684" y="495" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">S</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text></g>
+<path d="M764,560 L764,580 M740,580 L788,580 M749,590 L779,590 M758,600 L770,600" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<line x1="914" y1="100" x2="814" y2="100" stroke="var(--gold)" stroke-width="3.2"/><path d="M816,89 L796,100 L816,111 Z" fill="var(--gold)"/>
+<text x="844" y="82" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--gold)">i</tspan><tspan font-size="19" dy="8" fill="var(--gold)">d</tspan><tspan dy="-8" fill="var(--gold)"></tspan></text>
+<text x="874" y="186" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="848" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">ds</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="874" y="538" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">−</text>
+<path d="M1020,130 L1020,396 M1020,506 L1020,560" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1004" y="396" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="1020" cy="130" r="8" fill="var(--blue)"/>
+<circle cx="1020" cy="560" r="8" fill="var(--blue)"/>
+<text x="1050" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">D</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<path d="M1210,130 L1210,396 M1210,506 L1210,560" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1194" y="396" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="1210" cy="130" r="8" fill="var(--blue)"/>
+<circle cx="1210" cy="560" r="8" fill="var(--blue)"/>
+<text x="1240" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">T</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="1329" cy="130" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<circle cx="1329" cy="560" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="1329" y="186" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">+</text>
+<text x="1350" y="463" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">IZ</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="1329" y="538" font-family="Arial, Liberation Sans, sans-serif" font-size="28" fill="var(--muted)" text-anchor="middle">−</text>
+<path d="M1160,650 L1160,500 L1060,500" fill="none" stroke="var(--muted)" stroke-width="2.6" marker-end="url(#dyngm)"/>
+<text x="1130" y="680" font-family="Times New Roman, Liberation Serif, serif" font-size="30"><tspan font-style="italic" fill="var(--muted)">R</tspan><tspan font-size="18" dy="7" fill="var(--muted)">IZ</tspan><tspan dy="-7" fill="var(--muted)"></tspan></text>
+</svg></div>
+<div id="v_eq" class="hide"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 600">
+
+<path d="M80,480 L80,343 M80,267 L80,130 L120,130 M220,130 L360,130 L360,250 M360,360 L360,480" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="80" cy="305" r="38" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<path d="M58,305 C66,279 74,279 80,305 C86,331 94,331 102,305" fill="none" stroke="var(--gold)" stroke-width="3.5"/>
+<text x="130" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">g</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<rect x="120" y="114" width="100" height="32" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="150" y="100" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">g</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<rect x="344" y="250" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<text x="278" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">G</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="360" cy="130" r="8" fill="var(--blue)"/>
+<circle cx="360" cy="480" r="8" fill="var(--blue)"/>
+<path d="M360,130 L470,130 M360,480 L470,480" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="479" cy="130" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="465" y="104" font-family="Arial, Liberation Sans, sans-serif" font-size="30" font-weight="bold" fill="var(--blue)">G</text>
+<text x="435" y="186" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)">+</text>
+<text x="400" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">gs</tspan><tspan dy="-8" fill="var(--blue)"> = </tspan><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">UL</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="438" y="458" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)">−</text>
+<path d="M80,480 L360,480 M470,480 L1290,480" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="500" y="526" font-family="Arial, Liberation Sans, sans-serif" font-size="30" font-weight="bold" fill="var(--blue)">S</text>
+<path d="M640,130 L1290,130 M640,130 L640,255 M640,355 L640,480" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="640" cy="305" r="50" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<line x1="640" y1="275" x2="640" y2="313" stroke="var(--gold)" stroke-width="4"/><path d="M628,311 L640,335 L652,311 Z" fill="var(--gold)"/>
+<text x="702" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--gold)">g</tspan><tspan font-size="19" dy="8" fill="var(--gold)">m</tspan><tspan dy="-8" fill="var(--gold)"></tspan><tspan font-style="italic" fill="var(--gold)">u</tspan><tspan font-size="19" dy="8" fill="var(--gold)">gs</tspan><tspan dy="-8" fill="var(--gold)"></tspan></text>
+<text x="630" y="104" font-family="Arial, Liberation Sans, sans-serif" font-size="30" font-weight="bold" fill="var(--blue)">D</text>
+<path d="M820,130 L820,250 M820,360 L820,480" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="804" y="250" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="820" cy="130" r="8" fill="var(--blue)"/>
+<circle cx="820" cy="480" r="8" fill="var(--blue)"/>
+<text x="848" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">r</tspan><tspan font-size="19" dy="8" fill="var(--blue)">d</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<path d="M980,130 L980,250 M980,360 L980,480" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="964" y="250" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="980" cy="130" r="8" fill="var(--blue)"/>
+<circle cx="980" cy="480" r="8" fill="var(--blue)"/>
+<text x="1008" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">D</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<path d="M1130,130 L1130,250 M1130,360 L1130,480" fill="none" stroke="var(--blue)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1114" y="250" width="32" height="110" rx="3" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="3.5"/>
+<circle cx="1130" cy="130" r="8" fill="var(--blue)"/>
+<circle cx="1130" cy="480" r="8" fill="var(--blue)"/>
+<text x="1158" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">R</tspan><tspan font-size="19" dy="8" fill="var(--blue)">T</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<circle cx="640" cy="130" r="8" fill="var(--blue)"/>
+<circle cx="640" cy="480" r="8" fill="var(--blue)"/>
+<circle cx="1299" cy="130" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<circle cx="1299" cy="480" r="9" fill="var(--bg)" stroke="var(--blue)" stroke-width="3"/>
+<text x="1290" y="188" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)">+</text>
+<text x="1272" y="317" font-family="Times New Roman, Liberation Serif, serif" font-size="32"><tspan font-style="italic" fill="var(--blue)">u</tspan><tspan font-size="19" dy="8" fill="var(--blue)">IZ</tspan><tspan dy="-8" fill="var(--blue)"></tspan></text>
+<text x="1292" y="458" font-family="Arial, Liberation Sans, sans-serif" font-size="30" fill="var(--muted)">−</text>
+<path d="M810,520 L810,532 L1140,532 L1140,520" fill="none" stroke="var(--muted)" stroke-width="2"/>
+<text x="885.0" y="570" font-family="Times New Roman, Liberation Serif, serif" font-size="28"><tspan font-style="italic" fill="var(--muted)">r</tspan><tspan font-size="17" dy="7" fill="var(--muted)">d</tspan><tspan dy="-7" fill="var(--muted)"> <tspan font-family="DejaVu Sans">∥</tspan> </tspan><tspan font-style="italic" fill="var(--muted)">R</tspan><tspan font-size="17" dy="7" fill="var(--muted)">D</tspan><tspan dy="-7" fill="var(--muted)"> <tspan font-family="DejaVu Sans">∥</tspan> </tspan><tspan font-style="italic" fill="var(--muted)">R</tspan><tspan font-size="17" dy="7" fill="var(--muted)">T</tspan><tspan dy="-7" fill="var(--muted)"></tspan></text>
+</svg></div>
+<p class="cap" id="cap"></p>
+<span class="state" id="state"></span>
+</section>
+<section aria-label="Valni oblici">
+<div class="gt">Ulaz pojačala</div>
+<div class="leg"><span><i class="sw" style="border-color:var(--muted);border-top-style:dashed"></i><span><span class="vi">u</span><sub>g</sub> (izvor)</span></span><span><i class="sw" style="border-color:var(--blue)"></i><span><span class="vi">u</span><sub>UL</sub></span></span></div>
+<svg id="gI" viewBox="0 0 720 230" role="img" aria-label="Napon izvora i ulazni napon pojačala"></svg>
+<div class="gt" style="margin-top:6px">Izlaz pojačala</div>
+<div class="leg"><span><i class="sw" style="border-color:var(--gold)"></i><span><span class="vi">u</span><sub>IZ</sub> (stvarni tranzistor)</span></span><span><i class="sw" style="border-color:var(--muted);border-top-style:dashed"></i><span>linearni model <span class="vi">A</span><sub>ug</sub><span class="vi">u</span><sub>g</sub></span></span></div>
+<svg id="gO" viewBox="0 0 720 230" role="img" aria-label="Izlazni napon pojačala"></svg>
+<p class="cap" id="wcap"></p>
+</section>
+</div>
+
+<div class="controls">
+<div class="grp" style="margin-top:0;border-top:0;padding-top:0">Sklop</div>
+<div class="ctl"><label for="udd"><span><span class="vi">U</span><sub>DD</sub></span><output id="uddO"></output></label><input id="udd" type="range" min="5" max="25" step="0.5" value="15"></div>
+<div class="ctl"><label for="r1"><span><span class="vi">R</span><sub>1</sub></span><output id="r1O"></output></label><input id="r1" type="range" min="0.5" max="10" step="0.1" value="3.3"></div>
+<div class="ctl"><label for="r2"><span><span class="vi">R</span><sub>2</sub></span><output id="r2O"></output></label><input id="r2" type="range" min="0.2" max="5" step="0.1" value="1.2"></div>
+<div class="ctl"><label for="rd"><span><span class="vi">R</span><sub>D</sub></span><output id="rdO"></output></label><input id="rd" type="range" min="0.5" max="10" step="0.1" value="3.3"></div>
+<div class="ctl"><label for="rs"><span><span class="vi">R</span><sub>S</sub></span><output id="rsO"></output></label><input id="rs" type="range" min="0.1" max="5" step="0.1" value="1"></div>
+<div class="ctl"><label class="chk" for="cs"><input id="cs" type="checkbox" checked><span>Premosni kondenzator <span class="vi">C</span><sub>S</sub> spojen</span></label></div>
+<div class="grp">Izvor signala i trošilo</div>
+<div class="ctl"><label for="rg"><span><span class="vi">R</span><sub>g</sub></span><output id="rgO"></output></label><input id="rg" type="range" min="0" max="17" step="1" value="5"></div>
+<div class="ctl"><label for="rt"><span><span class="vi">R</span><sub>T</sub></span><output id="rtO"></output></label><input id="rt" type="range" min="0" max="9" step="1" value="5"></div>
+<div class="ctl"><label for="amp"><span>Amplituda <span class="vi">u</span><sub>g</sub></span><output id="ampO"></output></label><input id="amp" type="range" min="10" max="800" step="10" value="100"></div>
+<div class="grp">Tranzistor</div>
+<div class="ctl"><label for="kk"><span><span class="vi">K</span></span><output id="kkO"></output></label><input id="kk" type="range" min="0.5" max="10" step="0.1" value="4"></div>
+<div class="ctl"><label for="vt"><span><span class="vi">U</span><sub>GS0</sub></span><output id="vtO"></output></label><input id="vt" type="range" min="0.5" max="3" step="0.1" value="1"></div>
+<div class="ctl"><label for="lam"><span><span class="vi">λ</span></span><output id="lamO"></output></label><input id="lam" type="range" min="0" max="0.05" step="0.001" value="0.01"></div>
+</div>
+
+<div class="steps">
+<div class="col"><h2><span>1</span>Statička analiza</h2><div id="s1"></div></div>
+<div class="col"><h2><span>2</span>Dinamički parametri</h2><div id="s2"></div></div>
+<div class="col"><h2><span>3</span>Dinamička analiza</h2><div id="s3"></div></div>
+</div>
+</main>
+<script>
+(function(){
+var NS="http://www.w3.org/2000/svg";
+var $=function(id){return document.getElementById(id);};
+var nf=function(x,d){if(!isFinite(x))return "∞";return (Math.abs(x)<1e-12?0:x).toLocaleString("hr-HR",{minimumFractionDigits:0,maximumFractionDigits:d});};
+var g3=function(x){var a=Math.abs(x),d=a>=10?1:2;return (Math.abs(x)<1e-12?0:x).toLocaleString("hr-HR",{minimumFractionDigits:d,maximumFractionDigits:d});};
+var n3=function(x){if(!isFinite(x))return "∞";var a=Math.abs(x);return nf(x,a>=100?0:a>=10?1:a>=1?2:3);};
+var v=function(b,s){return '<span class="vi">'+b+'</span>'+(s?'<sub>'+s+'</sub>':'');};
+var fr=function(a,b){return '<span class="fr"><span>'+a+'</span><span>'+b+'</span></span>';};
+var par=function(){var g=0;for(var i=0;i<arguments.length;i++){var r=arguments[i];if(isFinite(r))g+=1/r;}return 1/g;};
+var PL=' ∥ ';
+function el(g,n,a,t){var e=document.createElementNS(NS,n);for(var i in a)e.setAttribute(i,a[i]);if(t!=null)e.textContent=t;g.appendChild(e);return e;}
+function nice(x){var p=Math.pow(10,Math.floor(Math.log10(x))),m=x/p;return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*p;}
+// log sliders: R_g 10 Ω … 10 MΩ ; R_T 100 Ω … 1 MΩ (value in kΩ)
+var RGL=[0.01,0.05,0.1,0.2,0.5,1,2,5,10,20,50,100,200,500,1000,2000,5000,10000];
+var RTL=[0.5,1,2,3.3,4.7,10,22,47,100,1000];
+function rgVal(){return RGL[+$("rg").value];}
+function rtVal(){return RTL[+$("rt").value];}
+function fR(k){ if(k>=1000)return n3(k/1000)+" MΩ"; if(k>=1)return n3(k)+" kΩ"; return nf(k*1000,0)+" Ω";}
+var view="amp",S;
+function P(){return {udd:+$("udd").value,r1:+$("r1").value*1000,r2:+$("r2").value*1000,rd:+$("rd").value,rs:+$("rs").value,cs:$("cs").checked,
+  rg:rgVal(),rt:rtVal(),amp:+$("amp").value,K:+$("kk").value,vt:+$("vt").value,lam:+$("lam").value};}
+function idm(K,vt,lam,ugs,uds){var vo=ugs-vt;if(vo<=0)return 0;if(uds<=0)return 0;return (uds<vo?K*(vo*uds-uds*uds/2):K/2*vo*vo)*(1+lam*uds);}
+function compute(){
+  var p=P(),s={p:p};
+  s.UGG=p.udd*p.r2/(p.r1+p.r2);
+  var RK=p.rs*p.K; s.RK=RK;
+  s.b=2/RK-2*p.vt; s.c=p.vt*p.vt-2*s.UGG/RK;
+  var D=s.b*s.b-4*s.c; s.D=D;
+  s.on=s.UGG>p.vt;
+  if(s.on){s.u1=(-s.b+Math.sqrt(D))/2;s.u2=(-s.b-Math.sqrt(D))/2;s.UGSQ=s.u1;s.IDQ=p.K/2*Math.pow(s.UGSQ-p.vt,2);}
+  else{s.UGSQ=s.UGG;s.IDQ=0;}
+  s.UDSQ=p.udd-s.IDQ*(p.rd+p.rs);
+  s.sat=s.on&&s.UDSQ>=s.UGSQ-p.vt;
+  s.gm=s.on?p.K*(s.UGSQ-p.vt)*(1+p.lam*s.UDSQ):0;
+  s.rd=(p.lam>0&&s.IDQ>0)?1/(p.lam*s.IDQ):Infinity;
+  s.RG=par(p.r1,p.r2);
+  s.Rl=par(p.rd,p.rt);
+  if(p.cs){s.Rsum=par(s.rd,p.rd,p.rt);s.Au=-s.gm*s.Rsum;s.Riz=par(s.rd,p.rd);}
+  else{s.Au=-s.gm*s.Rl/(1+s.gm*p.rs);var mu=s.gm*s.rd;s.Riz=isFinite(s.rd)?par(p.rd,s.rd+(1+mu)*p.rs):p.rd;}
+  s.div=s.RG/(p.rg+s.RG); s.Aug=s.Au*s.div;
+  // large-signal waveforms
+  var N=240,Rsac=p.cs?0:p.rs,I0=idm(p.K,p.vt,p.lam,s.UGSQ,s.UDSQ),dist=false,cut=false,tri=false;
+  s.w=[];
+  for(var k=0;k<=N;k++){
+    var t=k/N*2,ug=p.amp/1000*Math.sin(2*Math.PI*t),uul=ug*s.div;
+    var lo=0,hi=I0+Math.max(s.UDSQ,0)/(s.Rl+Rsac)+1e-9,i=0;
+    if(s.sat){
+      for(var j=0;j<70;j++){var m=(lo+hi)/2,ugs=s.UGSQ+uul-(m-I0)*Rsac,uds=s.UDSQ-(m-I0)*(s.Rl+Rsac);
+        if(idm(p.K,p.vt,p.lam,ugs,uds)-m>0)lo=m;else hi=m;}
+      i=(lo+hi)/2;var ugs2=s.UGSQ+uul-(i-I0)*Rsac,uds2=s.UDSQ-(i-I0)*(s.Rl+Rsac);
+      if(ugs2<=p.vt)cut=true; else if(uds2<ugs2-p.vt)tri=true;
+    } else i=I0;
+    s.w.push({t:t,ug:ug,uul:uul,uiz:-(i-I0)*s.Rl,lin:s.Aug*ug});
+  }
+  s.cut=cut;s.tri=tri;
+  S=s;
+}
+function axes(g,ox,oy,W,top,yl,ys,yu){
+  el(g,"path",{d:"M"+(ox-6)+","+oy+" L"+(ox+W+12)+","+oy,stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox+W+12)+","+(oy-6)+" L"+(ox+W+24)+","+oy+" L"+(ox+W+12)+","+(oy+6)+" Z",fill:"var(--muted)"});
+  el(g,"path",{d:"M"+ox+","+(top+206)+" L"+ox+","+(top+10),stroke:"var(--muted)","stroke-width":2,fill:"none"});
+  el(g,"path",{d:"M"+(ox-6)+","+(top+12)+" L"+ox+","+top+" L"+(ox+6)+","+(top+12)+" Z",fill:"var(--muted)"});
+  el(g,"text",{x:ox+W+24,y:oy+24,"font-size":17,fill:"var(--muted)","font-family":"Times New Roman, serif","font-style":"italic","text-anchor":"end"},"t");
+  var u=el(g,"text",{x:ox+12,y:top+12,"font-size":19,fill:"var(--muted)","font-family":"Times New Roman, serif","font-style":"italic"});u.innerHTML=yl+'<tspan font-size="12" dy="5">'+ys+'</tspan><tspan dy="-5" font-style="normal" font-family="Arial" font-size="13">, '+yu+'</tspan>';
+}
+function wave(id,series,unitScale,unit,yl,ys){
+  var g=$(id);g.innerHTML="";var ox=70,oy=124,W=600,top=12,H=92;
+  var mx=0;series.forEach(function(sr){S.w.forEach(function(q){mx=Math.max(mx,Math.abs(q[sr.k]*unitScale));});});
+  var YM=nice(Math.max(mx,1e-6)*1.1);
+  var X=function(t){return ox+W*t/2;},Y=function(y){return oy-H*y/YM;};
+  [-1,-0.5,0.5,1].forEach(function(f){el(g,"line",{x1:ox,y1:Y(f*YM),x2:ox+W,y2:Y(f*YM),stroke:"var(--line)","stroke-width":1});
+    el(g,"text",{x:ox-8,y:Y(f*YM)+5,"text-anchor":"end","font-size":13,fill:"var(--muted)"},nf(f*YM,3));});
+  axes(g,ox,oy,W,top,yl,ys,unit);
+  series.forEach(function(sr){var d="";S.w.forEach(function(q,k){d+=(k?"L":"M")+X(q.t).toFixed(1)+","+Y(q[sr.k]*unitScale).toFixed(1);});
+    var a={d:d,fill:"none",stroke:sr.c,"stroke-width":sr.w,"stroke-linejoin":"round"};if(sr.dash)a["stroke-dasharray"]=sr.dash;el(g,"path",a);});
+}
+function draw(){
+  var s=S,p=s.p;
+  // schematic toggles
+  $("gCS").style.display=p.cs?"":"none";
+  $("dW").style.display=p.cs?"":"none";$("dR").style.display=p.cs?"none":"";
+  $("vIDQ").textContent=n3(s.IDQ)+" mA";$("vUGSQ").textContent=n3(s.UGSQ)+" V";$("vUDSQ").textContent=n3(s.UDSQ)+" V";
+  $("vUGG").innerHTML='<tspan font-family="Times New Roman" font-style="italic">U</tspan><tspan font-size="13" dy="5">GG</tspan><tspan dy="-5"> = '+n3(s.UGG)+' V</tspan>';
+  var caps={amp:"Kondenzatori za vezu <b>"+v("C","G")+"</b> i <b>"+v("C","D")+"</b> odvajaju istosmjerne prilike od izvora i trošila. "+(p.cs?"Premosni kondenzator <b>"+v("C","S")+"</b> za signal kratko spaja "+v("R","S")+", pa je uvod na masi.":"Bez "+v("C","S")+" otpornik "+v("R","S")+" ostaje i u dinamičkim prilikama – pojačanje se smanjuje."),
+    sta:"Statička analiza: djeluje samo "+v("U","DD")+", kondenzatori se <b>odspajaju</b>. Ostaje sklop s djelilom i "+v("R","S")+" (jednadžbe 10.6–10.9).",
+    dyn:"Dinamička analiza: kondenzatori su <b>kratki spoj</b>, "+v("U","DD")+" je spojen na masu, "+v("R","G")+" = "+v("R","1")+PL+v("R","2")+". "+(p.cs?"Uvod je na masi.":"Bez "+v("C","S")+" između uvoda i mase ostaje "+v("R","S")+"."),
+    eq:"Tranzistor je zamijenjen modelom za mali signal: strujni izvor "+v("g","m")+v("u","gs")+" i izlazni otpor "+v("r","d")+"."+(p.cs?"":' <span class="warn">Prikazana shema vrijedi uz spojen '+v("C","S")+'; bez njega u uvod treba dodati '+v("R","S")+'.</span>')};
+  $("cap").innerHTML=caps[view];
+  var st=$("state");
+  if(!s.on){st.className="state bad";st.textContent="Tranzistor zapire: UGG ≤ UGS0, struja ne teče";}
+  else if(!s.sat){st.className="state bad";st.textContent="Radna točka nije u području zasićenja – pojačalo ne radi ispravno";}
+  else{st.className="state sat";st.textContent="Radna točka je u području zasićenja";}
+  // waveforms
+  var ms=S.w.reduce(function(a,q){return Math.max(a,Math.abs(q.uiz),Math.abs(q.lin));},0);
+  var useV=ms>=0.5;
+  wave("gI",[{k:"ug",c:"var(--muted)",w:2.2,dash:"7 5"},{k:"uul",c:"var(--blue)",w:3.2}],1000,"mV","u","");
+  wave("gO",[{k:"lin",c:"var(--muted)",w:2,dash:"7 5"},{k:"uiz",c:"var(--gold)",w:3.6}],useV?1:1000,useV?"V":"mV","u","IZ");
+  var wc="";
+  if(!s.sat)wc='<span class="warn">Tranzistor nije u zasićenju pa pojačalo ne pojačava.</span>';
+  else if(s.cut)wc='<span class="warn">Izobličenje: u dijelu periode tranzistor zapire ('+v("u","GS")+' &lt; '+v("U","GS0")+'). Smanjite amplitudu.</span>';
+  else if(s.tri)wc='<span class="warn">Izobličenje: u dijelu periode tranzistor ulazi u triodno područje. Smanjite amplitudu ili pomaknite radnu točku.</span>';
+  else wc="Izlaz je u <b>protufazi</b> s ulazom (negativno pojačanje). Mala razlika prema linearnom modelu posljedica je kvadratne karakteristike tranzistora.";
+  $("wcap").innerHTML=wc;
+  // steps
+  var bad=s.sat?"":" bd";
+  var h1='';
+  h1+='<p class="st"><span class="lbl">Napon djelila ('+v("I","G")+' = 0)</span>'+v("U","GG")+' = '+fr(v("R","2"),v("R","1")+" + "+v("R","2"))+v("U","DD")+' = '+fr(n3(p.r2/1000),n3(p.r1/1000)+" + "+n3(p.r2/1000))+'·'+n3(p.udd)+' = <b>'+n3(s.UGG)+' V</b></p>';
+  h1+='<p class="st"><span class="lbl">Ulazni krug</span>'+v("U","GG")+' = '+v("U","GSQ")+' + '+v("R","S")+fr(v("K"),"2")+'('+v("U","GSQ")+' − '+v("U","GS0")+')²</p>';
+  if(s.on){
+    var sg=function(x){return (x<0?" − ":" + ")+n3(Math.abs(x));};
+    h1+='<p class="st"><span class="lbl">Kvadratna jednadžba uz '+v("R","S")+v("K")+' = '+n3(s.RK)+' V⁻¹</span>'+v("U","GSQ")+'²'+sg(s.b)+'·'+v("U","GSQ")+sg(s.c)+' = 0</p>';
+    h1+='<p class="st">'+v("U","GSQ")+' = '+fr(n3(-s.b)+" ± "+n3(Math.sqrt(s.D)),"2")+' → <b>'+n3(s.u1)+' V</b> <span class="lbl">(rješenje '+n3(s.u2)+' V &lt; '+v("U","GS0")+' se odbacuje)</span></p>';
+    h1+='<p class="st"><span class="lbl">Struja odvoda</span>'+v("I","DQ")+' = '+fr(v("K"),"2")+'('+v("U","GSQ")+' − '+v("U","GS0")+')² = '+fr(n3(p.K),"2")+'·('+n3(s.UGSQ)+' − '+n3(p.vt)+')² = <b>'+n3(s.IDQ)+' mA</b></p>';
+    h1+='<p class="st"><span class="lbl">Napon odvod–uvod</span>'+v("U","DSQ")+' = '+v("U","DD")+' − '+v("I","DQ")+'('+v("R","D")+' + '+v("R","S")+') = '+n3(p.udd)+' − '+n3(s.IDQ)+'·('+n3(p.rd)+' + '+n3(p.rs)+') = <b class="'+bad+'">'+n3(s.UDSQ)+' V</b></p>';
+    h1+='<p class="st"><span class="lbl">Provjera zasićenja</span>'+v("U","DSQ")+' = '+n3(s.UDSQ)+' V '+(s.sat?'≥':'&lt;')+' '+v("U","GSQ")+' − '+v("U","GS0")+' = '+n3(s.UGSQ-p.vt)+' V → <b class="'+(s.sat?'gd':'bd')+'">'+(s.sat?'zasićenje':'nije zasićenje')+'</b></p>';
+  } else h1+='<p class="st warn">'+v("U","GG")+' ≤ '+v("U","GS0")+': tranzistor zapire, '+v("I","DQ")+' = 0.</p>';
+  $("s1").innerHTML=h1;
+  var h2='';
+  h2+='<p class="st"><span class="lbl">Strmina</span>'+v("g","m")+' = '+v("K")+'('+v("U","GSQ")+' − '+v("U","GS0")+')(1 + '+v("λ")+v("U","DSQ")+')</p>';
+  h2+='<p class="st">'+v("g","m")+' = '+n3(p.K)+'·('+n3(s.UGSQ)+' − '+n3(p.vt)+')·(1 + '+nf(p.lam,3)+'·'+n3(s.UDSQ)+') = <b>'+n3(s.gm)+' mA/V</b></p>';
+  h2+='<p class="st"><span class="lbl">Izlazni otpor tranzistora</span>'+fr("1",v("r","d"))+' = '+v("λ")+v("I","DQ")+' = '+nf(p.lam,3)+'·'+n3(s.IDQ)+' = '+n3(p.lam*s.IDQ*1000)+' µS</p>';
+  h2+='<p class="st">'+v("r","d")+' = '+fr("1",v("λ")+v("I","DQ"))+' = <b>'+(isFinite(s.rd)?fR(s.rd):"∞")+'</b></p>';
+  h2+='<p class="st"><span class="lbl">Faktor naponskog pojačanja</span>'+v("μ")+' = '+v("g","m")+v("r","d")+' = <b>'+(isFinite(s.rd)?n3(s.gm*s.rd):"∞")+'</b></p>';
+  $("s2").innerHTML=h2;
+  var h3='';
+  if(p.cs){
+    h3+='<p class="st"><span class="lbl">Naponsko pojačanje</span>'+v("A","u")+' = '+fr(v("u","IZ"),v("u","UL"))+' = −'+v("g","m")+'('+v("r","d")+PL+v("R","D")+PL+v("R","T")+')</p>';
+    h3+='<p class="st">'+v("A","u")+' = −'+n3(s.gm)+'·('+(isFinite(s.rd)?n3(s.rd):"∞")+PL+n3(p.rd)+PL+n3(p.rt)+') = −'+n3(s.gm)+'·'+n3(s.Rsum)+' = <b class="'+bad+'">'+g3(s.Au)+'</b></p>';
+  } else {
+    h3+='<p class="st"><span class="lbl">Naponsko pojačanje bez '+v("C","S")+' ('+v("r","d")+' zanemaren)</span>'+v("A","u")+' ≈ −'+fr(v("g","m")+'('+v("R","D")+PL+v("R","T")+')','1 + '+v("g","m")+v("R","S"))+'</p>';
+    h3+='<p class="st">'+v("A","u")+' ≈ −'+fr(n3(s.gm)+'·'+n3(s.Rl),'1 + '+n3(s.gm)+'·'+n3(p.rs))+' = <b class="'+bad+'">'+g3(s.Au)+'</b></p>';
+  }
+  h3+='<p class="st"><span class="lbl">Ulazni otpor</span>'+v("R","UL")+' = '+v("R","G")+' = '+v("R","1")+PL+v("R","2")+' = '+n3(p.r1/1000)+PL+n3(p.r2/1000)+' = <b>'+fR(s.RG)+'</b></p>';
+  h3+='<p class="st"><span class="lbl">Pojačanje od izvora signala</span>'+v("A","ug")+' = '+fr(v("u","IZ"),v("u","g"))+' = '+v("A","u")+fr(v("R","G"),v("R","g")+" + "+v("R","G"))+' = '+g3(s.Au)+'·'+fr(fR(s.RG),fR(p.rg)+" + "+fR(s.RG))+' = <b class="'+bad+'">'+g3(s.Aug)+'</b></p>';
+  if(p.cs) h3+='<p class="st"><span class="lbl">Izlazni otpor</span>'+v("R","IZ")+' = '+v("r","d")+PL+v("R","D")+' = <b>'+fR(s.Riz)+'</b></p>';
+  else h3+='<p class="st"><span class="lbl">Izlazni otpor</span>'+v("R","IZ")+' = '+v("R","D")+PL+'['+v("r","d")+' + (1 + '+v("μ")+')'+v("R","S")+'] ≈ '+v("R","D")+' = <b>'+fR(s.Riz)+'</b></p>';
+  $("s3").innerHTML=h3;
+  // outputs
+  $("uddO").textContent=nf(p.udd,1)+" V";$("r1O").textContent=fR(p.r1);$("r2O").textContent=fR(p.r2);
+  $("rdO").textContent=fR(p.rd);$("rsO").textContent=fR(p.rs);$("rgO").textContent=fR(p.rg);$("rtO").textContent=fR(p.rt);
+  $("ampO").textContent=nf(p.amp,0)+" mV";$("kkO").textContent=nf(p.K,1)+" mA/V²";$("vtO").textContent=nf(p.vt,1)+" V";$("lamO").textContent=nf(p.lam,3)+" V⁻¹";
+}
+function upd(){compute();draw();}
+document.querySelectorAll("input").forEach(function(i){i.addEventListener("input",upd);});
+document.querySelectorAll(".tabs button").forEach(function(b){b.addEventListener("click",function(){
+  view=b.dataset.v;document.querySelectorAll(".tabs button").forEach(function(x){x.setAttribute("aria-selected",x===b?"true":"false");});
+  ["amp","sta","dyn","eq"].forEach(function(k){$("v_"+k).classList.toggle("hide",k!==view);});draw();});});
+upd();
+})();
+</script>
+</body>
+</html>

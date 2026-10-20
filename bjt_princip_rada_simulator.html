@@ -42,6 +42,14 @@ svg{display:block;width:100%;height:auto;max-width:100%}
 .ctl label{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--muted);margin-bottom:8px}
 .ctl label output{color:var(--blue);font-weight:bold;font-variant-numeric:tabular-nums;white-space:nowrap}
 input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+
+.modes{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 12px;font-size:15px;color:var(--muted)}
+.modes button{border:2px solid var(--blue);background:transparent;color:var(--blue);font:inherit;font-size:15px;padding:7px 12px;border-radius:8px;cursor:pointer}
+.modes button[aria-pressed="true"]{background:var(--blue);color:var(--bg);font-weight:bold}
+.ctl.dis{opacity:.4}
+.cat{margin-top:14px;border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--muted);line-height:1.55}
+.cat b{color:var(--ink)}
+.warn{color:var(--red);font-weight:bold;margin-top:8px;font-size:15px}
 .presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
 .presets button{border:2px solid var(--blue);background:transparent;color:var(--blue);font:inherit;font-size:15px;padding:7px 12px;border-radius:8px;cursor:pointer}
 .presets button:hover{background:var(--blue-soft)}
@@ -60,18 +68,21 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-o
 <svg id="sv" viewBox="0 0 900 560" role="img" aria-label="Presjek npn tranzistora s tokovima elektrona i šupljina"></svg>
 </section>
 <section aria-label="Struje i područje rada">
+<div class="modes" role="group" aria-label="Tranzistor"><span>Tranzistor:</span><button data-m="gen" aria-pressed="true">Pojednostavljeni model</button><button data-m="q" aria-pressed="false">2N2222A</button></div>
 <span class="state act" id="state"></span>
 <div class="pol"><div>Spoj emiter–baza<b id="pEB"></b></div><div>Spoj kolektor–baza<b id="pCB"></b></div></div>
-<div class="gt">Komponente struja (linearno mjerilo)</div>
+<div class="gt">Komponente struja (linearno mjerilo); struje priključaka pozitivne su kad ulaze u tranzistor</div>
 <div class="bars" id="bars"></div>
 <div class="facts" id="facts"></div>
+<div class="warn" id="warn"></div>
+<div class="cat" id="cat" hidden></div>
 </section>
 </div>
 <div class="controls">
 <div class="ctl"><label for="ube"><span><span class="vi">U</span><sub>BE</sub></span><output id="ubeO"></output></label><input id="ube" type="range" min="-2" max="0.8" step="0.005" value="0.7"></div>
 <div class="ctl"><label for="ucb"><span><span class="vi">U</span><sub>CB</sub></span><output id="ucbO"></output></label><input id="ucb" type="range" min="-0.8" max="10" step="0.05" value="5"></div>
-<div class="ctl"><label for="wb"><span>Širina baze <span class="vi">W</span><sub>B</sub></span><output id="wbO"></output></label><input id="wb" type="range" min="0.3" max="3" step="0.1" value="1"></div>
-<div class="ctl"><label for="nr"><span>Dopiranje emitera / baze</span><output id="nrO"></output></label><input id="nr" type="range" min="0" max="100" step="1" value="67"></div>
+<div class="ctl" id="cwb"><label for="wb"><span>Širina baze <span class="vi">W</span><sub>B</sub></span><output id="wbO"></output></label><input id="wb" type="range" min="0.3" max="3" step="0.1" value="1"></div>
+<div class="ctl" id="cnr"><label for="nr"><span>Dopiranje emitera / baze</span><output id="nrO"></output></label><input id="nr" type="range" min="0" max="100" step="1" value="67"></div>
 </div>
 <div class="presets" aria-label="Područja rada">
 <button data-p="act">Normalno aktivno</button><button data-p="sat">Zasićenje</button><button data-p="off">Zapiranje</button><button data-p="inv">Inverzno aktivno</button>
@@ -85,13 +96,13 @@ var UT=0.02585, I0=3.4e-12/*mA*/, LN=15/*µm*/, LEAK=1e-6/*mA*/;
 var nf=function(x,d){return x.toLocaleString("hr-HR",{minimumFractionDigits:d,maximumFractionDigits:d});};
 function fI(i){var a=Math.abs(i),s=i<0?"−":"";if(a<5e-7)return "≈ 0";if(a>=1)return s+nf(a,a>=10?1:2)+" mA";if(a>=1e-3)return s+nf(a*1e3,a*1e3>=10?1:2)+" µA";return s+nf(a*1e6,a*1e6>=10?1:2)+" nA";}
 function ratio(){var t=+$("nr").value/100;return 3*Math.pow(1000/3,t);}
-var S={};
+var S={},mode='gen';
 function compute(){
   var ube=+$("ube").value,ucb=+$("ucb").value,wb=+$("wb").value,r=ratio(),ubc=-ucb;
   var ex=function(u){return Math.exp(Math.min(u,0.85)/UT)-1;};
-  var IS=I0/wb, d=wb*wb/(2*LN*LN);
-  var IEn=IS*ex(ube), ICn=IS*ex(ubc);
-  var IEp=(0.4/r)*I0*ex(ube), ICp=4*I0*ex(ubc);
+  var IS,d,IEn,ICn,IEp,ICp;
+  if(mode==='q'){IS=14.34e-12;d=1/(2*255.9);IEn=IS*ex(ube);ICn=IS*ex(ubc);IEp=IEn/(2*255.9);ICp=ICn/6.092;}
+  else{IS=I0/wb;d=wb*wb/(2*LN*LN);IEn=IS*ex(ube);ICn=IS*ex(ubc);IEp=(0.4/r)*I0*ex(ube);ICp=4*I0*ex(ubc);}
   var leak=ubc<0?LEAK*(1-Math.exp(ubc/UT)):0;
   var IE=IEn+IEp-(1-d)*ICn;
   var IC=(1-d)*IEn-ICn-ICp+leak;
@@ -152,7 +163,7 @@ function drawStatic(){
   tx(xbm-22,Y1+34,"B",{"font-size":26,fill:"var(--blue)","font-weight":"bold"});
   // terminal current labels
   function cur(x,y,s,v){var e=el(t,"text",{x:x,y:y,"font-size":19,fill:"var(--blue)","text-anchor":"middle"});e.innerHTML='<tspan font-family="Times New Roman, serif" font-style="italic" font-size="22">I</tspan><tspan font-size="13" dy="5">'+s+'</tspan><tspan dy="-5" font-weight="bold"> = '+v.replace("≈ 0","0")+'</tspan>';}
-  cur(X0-50,Y0-10,"E",fI(S.IE));cur(X1+50,Y0-10,"C",fI(S.IC));cur(xbm+100,Y1+36,"B",fI(S.IB));
+  cur(X0-50,Y0-10,"E",fI(-S.IE));cur(X1+50,Y0-10,"C",fI(S.IC));cur(xbm+100,Y1+36,"B",fI(S.IB));
   tx(450,550,"točkice: elektroni (zlatno) i šupljine (crveno); gustoća toka u logaritamskom mjerilu",{"font-size":15});
 }
 /* ---------- particles ---------- */
@@ -184,7 +195,7 @@ function step(ts){
 /* ---------- side panel ---------- */
 var stTxt={act:"Normalno aktivno područje",sat:"Zasićenje",off:"Zapiranje",inv:"Inverzno aktivno područje"};
 var notes={
- act:"Spoj EB je <b>propusno</b>, a spoj CB <b>zaporno</b> polariziran. Emiter ubacuje elektrone u bazu; baza je tanka pa ih gotovo sve polje zapornog spoja CB povuče u kolektor. Struja baze sastoji se od šupljina koje prelaze u emiter (<span class=\"vi\">I</span><sub>Ep</sub>) i od rekombinacije u bazi. Promijenite <b>širinu baze</b> ili <b>omjer dopiranja</b> i promatrajte faktor <span class=\"vi\">β</span>. Promjena <span class=\"vi\">U</span><sub>CB</sub> gotovo ne mijenja <span class=\"vi\">I</span><sub>C</sub> – tranzistor se ponaša kao strujni izvor.",
+ act:"Spoj EB je <b>propusno</b>, a spoj CB <b>zaporno</b> polariziran. Emiter ubacuje elektrone u bazu; baza je tanka pa ih gotovo sve polje zapornog spoja CB povuče u kolektor. Struja baze sastoji se od šupljina koje prelaze u emiter (<span class=\"vi\">I</span><sub>pE</sub>) i od rekombinacije u bazi. Promijenite <b>širinu baze</b> ili <b>omjer dopiranja</b> i promatrajte faktor <span class=\"vi\">β</span>. Promjena <span class=\"vi\">U</span><sub>CB</sub> gotovo ne mijenja <span class=\"vi\">I</span><sub>C</sub> – tranzistor se ponaša kao strujni izvor.",
  sat:"Oba spoja su <b>propusno</b> polarizirana. I kolektor ubacuje elektrone u bazu, pa se tokovi djelomično poništavaju: struja kolektora više nije <span class=\"vi\">β</span> puta veća od struje baze, a napon <span class=\"vi\">U</span><sub>CE</sub> je malen (oko 0,2 V). Tako radi <b>uključena sklopka</b>.",
  off:"Oba spoja su <b>zaporno</b> polarizirana. Kroz tranzistor teku samo zanemarive zaporne struje – tranzistor je <b>isključena sklopka</b>.",
  inv:"Spoj EB je zaporno, a spoj CB propusno polariziran – uloge emitera i kolektora su zamijenjene. Kolektor je slabo dopiran pa slabo ubacuje elektrone, a faktor pojačanja je vrlo malen. Zato se ovo područje <b>rijetko koristi</b>."};
@@ -196,25 +207,33 @@ function side(){
   $("pCB").textContent=S.cbF?"propusno":"zaporno";$("pCB").className=S.cbF?"f":"r";
   var mx=Math.max(Math.abs(S.IE),Math.abs(S.IC),Math.abs(S.IEn),Math.abs(S.ICn),Math.abs(S.ICp),1e-9);
   var h="";
-  h+=bar("elektroni iz E "+V("I","En"),S.IEn,mx,"var(--gold)");
-  h+=bar("šupljine u E "+V("I","Ep"),S.IEp,mx,"var(--red)");
-  h+=bar("rekombinacija "+V("I","rek"),S.Irek,mx,"var(--gold)");
+  h+=bar("elektroni iz E "+V("I","nE"),S.IEn,mx,"var(--gold)");
+  h+=bar("šupljine u E "+V("I","pE"),S.IEp,mx,"var(--red)");
+  h+=bar("rekombinacija "+V("I","R"),S.Irek,mx,"var(--gold)");
   if(S.cbF){h+=bar("elektroni iz C",S.ICn,mx,"var(--gold)");h+=bar("šupljine u C",S.ICp,mx,"var(--red)");}
-  else h+=bar("zaporna struja "+V("I","CB0"),S.ICB0,mx,"var(--muted)");
+  else h+=bar("struja zasićenja "+V("I","CBO"),S.ICB0,mx,"var(--muted)");
   h+='<span class="sep"></span>';
-  h+=bar(V("I","E"),S.IE,mx,"var(--blue)");h+=bar(V("I","C"),S.IC,mx,"var(--blue)");h+=bar(V("I","B"),S.IB,mx,"var(--blue)");
+  h+=bar(V("I","E"),-S.IE,mx,"var(--blue)");h+=bar(V("I","C"),S.IC,mx,"var(--blue)");h+=bar(V("I","B"),S.IB,mx,"var(--blue)");
   $("bars").innerHTML=h;
   var ok=S.reg==="act"&&S.IE>1e-6;
-  var al=ok?(S.IC-S.ICB0)/S.IE:NaN,be=ok?S.IC/S.IB:NaN;
-  $("facts").innerHTML='<div class="fact"><div class="k">'+V("α","")+'= ('+V("I","C")+' − '+V("I","CB0")+') / '+V("I","E")+'</div><div class="val">'+(ok?nf(al,4):"—")+'</div><div class="f">spoj zajedničke baze</div></div>'
+  var al=ok?S.IC/S.IE:NaN,be=ok?S.IC/S.IB:NaN;
+  $("facts").innerHTML='<div class="fact"><div class="k">'+V("α","")+' = '+V("I","C")+' / (−'+V("I","E")+')</div><div class="val">'+(ok?nf(al,4):"—")+'</div><div class="f">spoj zajedničke baze</div></div>'
    +'<div class="fact"><div class="k">'+V("β","")+'= '+V("I","C")+' / '+V("I","B")+'</div><div class="val">'+(ok?nf(be,0):"—")+'</div><div class="f">spoj zajedničkog emitera</div></div>'
-   +'<div class="fact"><div class="k">Provjera '+V("I","E")+' = '+V("I","B")+' + '+V("I","C")+'</div><div class="val">'+fI(S.IB+S.IC)+'</div><div class="f">'+(ok?"faktori vrijede samo u normalnom aktivnom području":"α i β prikazuju se samo u normalnom aktivnom području")+'</div></div>';
-  $("note").innerHTML=notes[S.reg];
+   +'<div class="fact"><div class="k">Provjera '+V("I","E")+' + '+V("I","B")+' + '+V("I","C")+'</div><div class="val">'+(Math.abs(-S.IE+S.IB+S.IC)<1e-9?"0":fI(-S.IE+S.IB+S.IC))+'</div><div class="f">'+(ok?"faktori vrijede samo u normalnom aktivnom području":"α i β prikazuju se samo u normalnom aktivnom području")+'</div></div>';
+  $("note").innerHTML=(mode==="q"&&S.reg==="act")?notes.act.replace(/Promijenite <b>širinu baze<\/b>[^.]*\. /,"Za 2N2222A građa je zadana, a "+V("β","")+" je vrijednost iz SPICE modela; u katalogu je "+V("h","FE")+" od 75 do 300, ovisno o struji i primjerku. "):notes[S.reg];
+  var w="";var uce=S.ucb+S.ube,P=S.IC*uce;
+  if(mode==="q"){if(S.IC>600)w="Struja kolektora veća je od dopuštenih 600 mA!";else if(P>625)w="Snaga "+nf(P,0)+" mW veća je od dopuštenih 625 mW (bez hladnjaka)!";}
+  $("warn").textContent=w;
+  $("cwb").classList.toggle("dis",mode==="q");$("cnr").classList.toggle("dis",mode==="q");$("wb").disabled=$("nr").disabled=(mode==="q");
+  var c=$("cat");c.hidden=(mode!=="q");
+  if(mode==="q")c.innerHTML="<b>2N2222A – kataloški podaci</b> (onsemi P2N2222A): "+V("U","CEO")+" = 40 V, "+V("U","CBO")+" = 75 V, "+V("U","EBO")+" = 6 V, "+V("I","C")+" ≤ 600 mA, "+V("P","D")+" = 625 mW; "+V("h","FE")+" ≥ 75 pri 10 mA, 100–300 pri 150 mA; "+V("I","CBO")+" ≤ 10 nA (60 V); "+V("U","CEsat")+" ≤ 0,3 V (150 mA / 15 mA); "+V("f","T")+" ≥ 300 MHz.<br>Simulator koristi parametre SPICE modela: "+V("I","S")+" = 14,34 fA, "+V("β","F")+" = 256, "+V("β","R")+" = 6,1 (idealni model, bez pada "+V("β","")+" pri malim i velikim strujama).";
   $("ubeO").textContent=nf(S.ube,3)+" V";$("ucbO").textContent=nf(S.ucb,2)+" V";
   $("wbO").textContent=nf(S.wb,1)+" µm";$("nrO").textContent=nf(S.r,0)+" : 1";
 }
 function upd(){compute();drawStatic();side();if(reduce){last=0;step(performance.now());}}
 document.querySelectorAll("input").forEach(function(i){i.addEventListener("input",upd);});
+document.querySelectorAll(".modes button").forEach(function(b){b.addEventListener("click",function(){mode=b.dataset.m;document.querySelectorAll(".modes button").forEach(function(x){x.setAttribute("aria-pressed",x===b?"true":"false");});
+  if(mode==="q"){$("ube").value=0.65;}else{$("ube").value=0.7;}parts=[];upd();});});
 var P={act:[0.7,5],sat:[0.72,-0.6],off:[-1,5],inv:[-1,-0.7]};
 document.querySelectorAll(".presets button").forEach(function(b){b.addEventListener("click",function(){var q=P[b.dataset.p];$("ube").value=q[0];$("ucb").value=q[1];parts=[];upd();});});
 upd();if(!reduce)requestAnimationFrame(step);

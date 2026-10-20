@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Princip rada bipolarnog tranzistora – simulator</title>
+<style>
+:root{--bg:#FFFFFF;--ink:#1d1d1d;--muted:#757575;--line:#D9DCE3;--blue:#164194;--blue-soft:#EEF2FA;--blue-mid:#C9D4EC;--gold:#B19E3F;--gold-soft:#F6F2DF;--red:#C00000;--red-soft:#FBEAEA;--off:#ECECEC;--dep:#E3E3E3;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--blue-mid:#2C3A5E;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E;--off:#24272E;--dep:#3A3E47}}
+:root[data-theme="dark"]{--bg:#15181F;--ink:#ECEDF0;--muted:#A3A7B0;--line:#2E3440;--blue:#8EA7E8;--blue-soft:#1E2740;--blue-mid:#2C3A5E;--gold:#D4C06A;--gold-soft:#2D2A1A;--red:#FF7A7A;--red-soft:#3A1E1E;--off:#24272E;--dep:#3A3E47}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Liberation Sans",Helvetica,sans-serif}
+.wrap{max-width:1320px;margin:0 auto;padding:16px 28px 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.stage{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px;align-items:start}
+svg{display:block;width:100%;height:auto;max-width:100%}
+.vi{font-family:"Times New Roman","Liberation Serif",serif;font-style:italic;font-size:1.12em}
+.state{display:block;margin:0 0 12px;text-align:center;font-size:17px;font-weight:bold;padding:10px 12px;border-radius:8px}
+.state.act{color:var(--gold);background:var(--gold-soft)}
+.state.sat{color:var(--blue);background:var(--blue-soft)}
+.state.off{color:var(--muted);background:var(--off)}
+.state.inv{color:var(--red);background:var(--red-soft)}
+.pol{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.pol div{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:15px}
+.pol b{display:block;font-size:17px;margin-top:2px}
+.pol b.f{color:var(--gold)}.pol b.r{color:var(--muted)}
+.gt{font-size:15px;color:var(--muted);margin:4px 0 6px}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:15px}
+.bars .lab{white-space:nowrap}
+.bars .trk{height:14px;background:var(--off);border-radius:7px;overflow:hidden}
+.bars .fill{display:block;height:100%;border-radius:7px;width:0}
+.bars .val{font-variant-numeric:tabular-nums;font-weight:bold;color:var(--blue);text-align:right;min-width:86px}
+.bars .sep{grid-column:1/-1;border-top:1px dashed var(--line);margin:4px 0}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px}
+.fact{padding:4px 14px;border-left:1px solid var(--line)}
+.fact:first-child{border-left:0;padding-left:0}
+.fact .k{font-size:14px;color:var(--muted);margin-bottom:4px}
+.fact .val{font-size:24px;font-weight:bold;color:var(--blue);font-variant-numeric:tabular-nums}
+.fact .f{font-size:13px;color:var(--muted);margin-top:2px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 22px;align-items:end;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.ctl label{display:flex;justify-content:space-between;gap:8px;font-size:15px;color:var(--muted);margin-bottom:8px}
+.ctl label output{color:var(--blue);font-weight:bold;font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{width:100%;accent-color:var(--blue);height:28px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.presets button{border:2px solid var(--blue);background:transparent;color:var(--blue);font:inherit;font-size:15px;padding:7px 12px;border-radius:8px;cursor:pointer}
+.presets button:hover{background:var(--blue-soft)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.note{margin-top:14px;font-size:15px;color:var(--muted);max-width:95ch;line-height:1.5}
+.note b{color:var(--ink)}
+@media (max-width:1000px){.stage{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){.anim-note{display:block}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<h1 class="sr">Princip rada npn bipolarnog tranzistora – interaktivni prikaz</h1>
+<div class="stage">
+<section aria-label="Struktura tranzistora">
+<svg id="sv" viewBox="0 0 900 560" role="img" aria-label="Presjek npn tranzistora s tokovima elektrona i šupljina"></svg>
+</section>
+<section aria-label="Struje i područje rada">
+<span class="state act" id="state"></span>
+<div class="pol"><div>Spoj emiter–baza<b id="pEB"></b></div><div>Spoj kolektor–baza<b id="pCB"></b></div></div>
+<div class="gt">Komponente struja (linearno mjerilo)</div>
+<div class="bars" id="bars"></div>
+<div class="facts" id="facts"></div>
+</section>
+</div>
+<div class="controls">
+<div class="ctl"><label for="ube"><span><span class="vi">U</span><sub>BE</sub></span><output id="ubeO"></output></label><input id="ube" type="range" min="-2" max="0.8" step="0.005" value="0.7"></div>
+<div class="ctl"><label for="ucb"><span><span class="vi">U</span><sub>CB</sub></span><output id="ucbO"></output></label><input id="ucb" type="range" min="-0.8" max="10" step="0.05" value="5"></div>
+<div class="ctl"><label for="wb"><span>Širina baze <span class="vi">W</span><sub>B</sub></span><output id="wbO"></output></label><input id="wb" type="range" min="0.3" max="3" step="0.1" value="1"></div>
+<div class="ctl"><label for="nr"><span>Dopiranje emitera / baze</span><output id="nrO"></output></label><input id="nr" type="range" min="0" max="100" step="1" value="67"></div>
+</div>
+<div class="presets" aria-label="Područja rada">
+<button data-p="act">Normalno aktivno</button><button data-p="sat">Zasićenje</button><button data-p="off">Zapiranje</button><button data-p="inv">Inverzno aktivno</button>
+</div>
+<p class="note" id="note"></p>
+</main>
+<script>
+(function(){
+var NS="http://www.w3.org/2000/svg",$=function(i){return document.getElementById(i);};
+var UT=0.02585, I0=3.4e-12/*mA*/, LN=15/*µm*/, LEAK=1e-6/*mA*/;
+var nf=function(x,d){return x.toLocaleString("hr-HR",{minimumFractionDigits:d,maximumFractionDigits:d});};
+function fI(i){var a=Math.abs(i),s=i<0?"−":"";if(a<5e-7)return "≈ 0";if(a>=1)return s+nf(a,a>=10?1:2)+" mA";if(a>=1e-3)return s+nf(a*1e3,a*1e3>=10?1:2)+" µA";return s+nf(a*1e6,a*1e6>=10?1:2)+" nA";}
+function ratio(){var t=+$("nr").value/100;return 3*Math.pow(1000/3,t);}
+var S={};
+function compute(){
+  var ube=+$("ube").value,ucb=+$("ucb").value,wb=+$("wb").value,r=ratio(),ubc=-ucb;
+  var ex=function(u){return Math.exp(Math.min(u,0.85)/UT)-1;};
+  var IS=I0/wb, d=wb*wb/(2*LN*LN);
+  var IEn=IS*ex(ube), ICn=IS*ex(ubc);
+  var IEp=(0.4/r)*I0*ex(ube), ICp=4*I0*ex(ubc);
+  var leak=ubc<0?LEAK*(1-Math.exp(ubc/UT)):0;
+  var IE=IEn+IEp-(1-d)*ICn;
+  var IC=(1-d)*IEn-ICn-ICp+leak;
+  var IB=IE-IC;
+  var Irek=d*(IEn+ICn);
+  var ICB0=Math.max(0,leak-ICn-ICp);
+  var ebF=ube>0.5, cbF=ubc>0.5;
+  var reg=ebF&&!cbF?"act":(ebF&&cbF?"sat":(!ebF&&!cbF?"off":"inv"));
+  S={ube:ube,ucb:ucb,ubc:ubc,wb:wb,r:r,d:d,IEn:IEn,ICn:ICn,IEp:IEp,ICp:ICp,IE:IE,IC:IC,IB:IB,Irek:Irek,ICB0:ICB0,reg:reg,ebF:ebF,cbF:cbF};
+}
+/* ---------- structure drawing ---------- */
+var sv=$("sv"),G={};
+function el(g,n,a,t){var e=document.createElementNS(NS,n);for(var k in a)e.setAttribute(k,a[k]);if(t!=null)e.textContent=t;g.appendChild(e);return e;}
+var X0=110,X1=790,Y0=120,Y1=330,xEB0=380,xCB0=470; // base region 380..470 nominal
+function build(){
+  sv.innerHTML="";
+  var d=el(sv,"defs",{});
+  [["mb","var(--blue)"],["mg","var(--gold)"],["mr","var(--red)"]].forEach(function(m){var mk=el(d,"marker",{id:m[0],viewBox:"0 0 10 10",refX:8,refY:5,markerWidth:6,markerHeight:6,orient:"auto"});el(mk,"path",{d:"M0,0 L10,5 L0,10 z",fill:m[1]});});
+  G.reg=el(sv,"g",{});G.dep=el(sv,"g",{});G.par=el(sv,"g",{});G.top=el(sv,"g",{});
+}
+build();
+function drawStatic(){
+  var g=G.reg;g.innerHTML="";
+  var xb0=xEB0, xb1=xEB0+S.wb*30+30; // base width visual
+  S.xb0=xb0;S.xb1=xb1;
+  el(g,"rect",{x:X0,y:Y0,width:xb0-X0,height:Y1-Y0,fill:"var(--blue-mid)"});
+  el(g,"rect",{x:xb0,y:Y0,width:xb1-xb0,height:Y1-Y0,fill:"var(--gold-soft)"});
+  el(g,"rect",{x:xb1,y:Y0,width:X1-xb1,height:Y1-Y0,fill:"var(--blue-soft)"});
+  // depletion widths
+  var gd=G.dep;gd.innerHTML="";
+  var wEB=Math.max(4,10*Math.sqrt(Math.max(0.85-S.ube,0.05)));
+  var wCB=Math.max(4,16*Math.sqrt(Math.max(0.85-S.ubc,0.05)));
+  S.wCB=wCB;
+  el(gd,"rect",{x:xb0-wEB*0.2,y:Y0,width:wEB,height:Y1-Y0,fill:"var(--dep)",opacity:.9});
+  el(gd,"rect",{x:xb1-wCB*0.15,y:Y0,width:wCB,height:Y1-Y0,fill:"var(--dep)",opacity:.9});
+  el(gd,"rect",{x:X0,y:Y0,width:X1-X0,height:Y1-Y0,fill:"none",stroke:"var(--blue)","stroke-width":3});
+  [xb0,xb1].forEach(function(x){el(gd,"line",{x1:x,y1:Y0,x2:x,y2:Y1,stroke:"var(--blue)","stroke-width":1.5,"stroke-dasharray":"5 4"});});
+  var t=G.top;t.innerHTML="";
+  function tx(x,y,s,o){var a={x:x,y:y,"font-size":18,fill:"var(--muted)","text-anchor":"middle"};for(var k in o)a[k]=o[k];return el(t,"text",a,s);}
+  var e1=tx((X0+xb0)/2,Y0-14,"emiter n⁺");tx((xb0+xb1)/2,Y0-14,"baza p");tx((xb1+X1)/2,Y0-14,"kolektor n");
+  tx(xb0,Y0-48,"EB: "+(S.ebF?"propusno":"zaporno"),{fill:S.ebF?"var(--gold)":"var(--muted)","font-weight":"bold"});
+  tx(xb1+40,Y0-78,"CB: "+(S.cbF?"propusno":"zaporno"),{fill:S.cbF?"var(--gold)":"var(--muted)","font-weight":"bold"});
+  // leads + batteries
+  var yl=470,xbm=(xb0+xb1)/2,w={fill:"none",stroke:"var(--blue)","stroke-width":3.5,"stroke-linecap":"round","stroke-linejoin":"round"};
+  var pa=Object.assign({d:"M"+X0+","+((Y0+Y1)/2)+" L"+(X0-60)+","+((Y0+Y1)/2)+" L"+(X0-60)+","+yl+" L225,"+yl+" M239,"+yl+" L"+xbm+","+yl+" L"+xbm+","+Y1+" M"+xbm+","+yl+" L615,"+yl+" M629,"+yl+" L"+(X1+60)+","+yl+" L"+(X1+60)+","+((Y0+Y1)/2)+" L"+X1+","+((Y0+Y1)/2)},w);el(t,"path",pa);
+  function bat(x,pos){ // pos: true => + on right
+    var L=pos?x+7:x-7,Sh=pos?x-7:x+7;
+    el(t,"line",{x1:Sh,y1:yl-12,x2:Sh,y2:yl+12,stroke:"var(--blue)","stroke-width":6});
+    el(t,"line",{x1:L,y1:yl-26,x2:L,y2:yl+26,stroke:"var(--blue)","stroke-width":3.5});
+    tx(pos?x+24:x-24,yl-30,"+",{"font-size":22});tx(pos?x-22:x+22,yl-26,"−",{"font-size":22});
+  }
+  bat(232,S.ube>=0);bat(622,S.ucb>=0);
+  el(t,"circle",{cx:xbm,cy:yl,r:6,fill:"var(--blue)"});
+  var lb=function(x,y,b,s,v){var e=el(t,"text",{x:x,y:y,"font-size":24,fill:"var(--blue)","text-anchor":"middle","font-family":"Times New Roman, serif"});e.innerHTML='<tspan font-style="italic">'+b+'</tspan><tspan font-size="15" dy="5">'+s+'</tspan><tspan dy="-5"> = '+v+'</tspan>';};
+  lb(232,yl+58,"U","BE",nf(S.ube,2)+" V");lb(622,yl+58,"U","CB",nf(S.ucb,2)+" V");
+  tx(X0-80,(Y0+Y1)/2-12,"E",{"font-size":26,fill:"var(--blue)","font-weight":"bold"});
+  tx(X1+80,(Y0+Y1)/2-12,"C",{"font-size":26,fill:"var(--blue)","font-weight":"bold"});
+  tx(xbm-22,Y1+34,"B",{"font-size":26,fill:"var(--blue)","font-weight":"bold"});
+  // terminal current labels
+  function cur(x,y,s,v){var e=el(t,"text",{x:x,y:y,"font-size":19,fill:"var(--blue)","text-anchor":"middle"});e.innerHTML='<tspan font-family="Times New Roman, serif" font-style="italic" font-size="22">I</tspan><tspan font-size="13" dy="5">'+s+'</tspan><tspan dy="-5" font-weight="bold"> = '+v.replace("≈ 0","0")+'</tspan>';}
+  cur(X0-50,Y0-10,"E",fI(S.IE));cur(X1+50,Y0-10,"C",fI(S.IC));cur(xbm+100,Y1+36,"B",fI(S.IB));
+  tx(450,550,"točkice: elektroni (zlatno) i šupljine (crveno); gustoća toka u logaritamskom mjerilu",{"font-size":15});
+}
+/* ---------- particles ---------- */
+var parts=[],last=0,acc={};
+function rate(I){if(!(I>1e-5))return 0;var L=Math.log10(I/1e-5);return Math.min(60,0.024*Math.pow(L,4.44));}
+function flows(){
+  var xb0=S.xb0,xb1=S.xb1,xm=(xb0+xb1)/2;
+  return [
+   {k:"en",I:(1-S.d)*Math.max(S.IEn,0),x0:X0+10,x1:X1-10,c:"var(--gold)",y:[Y0+20,Y0+120],v:170},
+   {k:"rk",I:S.d*Math.max(S.IEn,0)+S.d*Math.max(S.ICn,0),x0:X0+10,x1:xm,c:"var(--gold)",y:[Y0+20,Y0+120],v:170,die:true},
+   {k:"hp",I:Math.max(S.IEp,0),x0:xm,x1:X0+40,c:"var(--red)",y:[Y0+135,Y1-15],v:90},
+   {k:"cn",I:(1-S.d)*Math.max(S.ICn,0),x0:X1-10,x1:X0+10,c:"var(--gold)",y:[Y0+20,Y0+120],v:170},
+   {k:"cp",I:Math.max(S.ICp,0),x0:xm,x1:X1-40,c:"var(--red)",y:[Y0+135,Y1-15],v:90}
+  ];
+}
+var reduce=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function step(ts){
+  var dt=last?Math.min((ts-last)/1000,0.05):0;last=ts;
+  var F=flows();
+  F.forEach(function(f){var r=rate(f.I);acc[f.k]=(acc[f.k]||0)+r*dt;while(acc[f.k]>=1){acc[f.k]-=1;
+    if(parts.length<420)parts.push({x:f.x0,x1:f.x1,y:f.y[0]+Math.random()*(f.y[1]-f.y[0]),c:f.c,v:f.v*(0.8+Math.random()*0.4)*(f.x1>f.x0?1:-1),die:f.die,dy:(f.die?40+Math.random()*30:0),a:1});}});
+  for(var i=parts.length-1;i>=0;i--){var p=parts[i];p.x+=p.v*dt;
+    if(p.die&&((p.v>0&&p.x>=p.x1))){p.a-=dt*2.5;p.x=p.x1;p.y+=40*dt;if(p.a<=0){parts.splice(i,1);continue;}}
+    else if((p.v>0&&p.x>=p.x1)||(p.v<0&&p.x<=p.x1)){parts.splice(i,1);continue;}}
+  var g=G.par;g.innerHTML="";
+  parts.forEach(function(p){el(g,"circle",{cx:p.x.toFixed(1),cy:p.y.toFixed(1),r:4,fill:p.c,opacity:p.a});});
+  if(!reduce)requestAnimationFrame(step);
+}
+/* ---------- side panel ---------- */
+var stTxt={act:"Normalno aktivno područje",sat:"Zasićenje",off:"Zapiranje",inv:"Inverzno aktivno područje"};
+var notes={
+ act:"Spoj EB je <b>propusno</b>, a spoj CB <b>zaporno</b> polariziran. Emiter ubacuje elektrone u bazu; baza je tanka pa ih gotovo sve polje zapornog spoja CB povuče u kolektor. Struja baze sastoji se od šupljina koje prelaze u emiter (<span class=\"vi\">I</span><sub>Ep</sub>) i od rekombinacije u bazi. Promijenite <b>širinu baze</b> ili <b>omjer dopiranja</b> i promatrajte faktor <span class=\"vi\">β</span>. Promjena <span class=\"vi\">U</span><sub>CB</sub> gotovo ne mijenja <span class=\"vi\">I</span><sub>C</sub> – tranzistor se ponaša kao strujni izvor.",
+ sat:"Oba spoja su <b>propusno</b> polarizirana. I kolektor ubacuje elektrone u bazu, pa se tokovi djelomično poništavaju: struja kolektora više nije <span class=\"vi\">β</span> puta veća od struje baze, a napon <span class=\"vi\">U</span><sub>CE</sub> je malen (oko 0,2 V). Tako radi <b>uključena sklopka</b>.",
+ off:"Oba spoja su <b>zaporno</b> polarizirana. Kroz tranzistor teku samo zanemarive zaporne struje – tranzistor je <b>isključena sklopka</b>.",
+ inv:"Spoj EB je zaporno, a spoj CB propusno polariziran – uloge emitera i kolektora su zamijenjene. Kolektor je slabo dopiran pa slabo ubacuje elektrone, a faktor pojačanja je vrlo malen. Zato se ovo područje <b>rijetko koristi</b>."};
+function bar(lab,I,mx,col){return '<span class="lab">'+lab+'</span><span class="trk"><span class="fill" style="width:'+Math.min(100,Math.abs(I)/mx*100).toFixed(1)+'%;background:'+col+'"></span></span><span class="val">'+fI(I)+'</span>';}
+var V=function(b,s){return '<span class="vi">'+b+'</span><sub>'+s+'</sub>';};
+function side(){
+  var st=$("state");st.className="state "+S.reg;st.textContent=stTxt[S.reg];
+  $("pEB").textContent=S.ebF?"propusno":"zaporno";$("pEB").className=S.ebF?"f":"r";
+  $("pCB").textContent=S.cbF?"propusno":"zaporno";$("pCB").className=S.cbF?"f":"r";
+  var mx=Math.max(Math.abs(S.IE),Math.abs(S.IC),Math.abs(S.IEn),Math.abs(S.ICn),Math.abs(S.ICp),1e-9);
+  var h="";
+  h+=bar("elektroni iz E "+V("I","En"),S.IEn,mx,"var(--gold)");
+  h+=bar("šupljine u E "+V("I","Ep"),S.IEp,mx,"var(--red)");
+  h+=bar("rekombinacija "+V("I","rek"),S.Irek,mx,"var(--gold)");
+  if(S.cbF){h+=bar("elektroni iz C",S.ICn,mx,"var(--gold)");h+=bar("šupljine u C",S.ICp,mx,"var(--red)");}
+  else h+=bar("zaporna struja "+V("I","CB0"),S.ICB0,mx,"var(--muted)");
+  h+='<span class="sep"></span>';
+  h+=bar(V("I","E"),S.IE,mx,"var(--blue)");h+=bar(V("I","C"),S.IC,mx,"var(--blue)");h+=bar(V("I","B"),S.IB,mx,"var(--blue)");
+  $("bars").innerHTML=h;
+  var ok=S.reg==="act"&&S.IE>1e-6;
+  var al=ok?(S.IC-S.ICB0)/S.IE:NaN,be=ok?S.IC/S.IB:NaN;
+  $("facts").innerHTML='<div class="fact"><div class="k">'+V("α","")+'= ('+V("I","C")+' − '+V("I","CB0")+') / '+V("I","E")+'</div><div class="val">'+(ok?nf(al,4):"—")+'</div><div class="f">spoj zajedničke baze</div></div>'
+   +'<div class="fact"><div class="k">'+V("β","")+'= '+V("I","C")+' / '+V("I","B")+'</div><div class="val">'+(ok?nf(be,0):"—")+'</div><div class="f">spoj zajedničkog emitera</div></div>'
+   +'<div class="fact"><div class="k">Provjera '+V("I","E")+' = '+V("I","B")+' + '+V("I","C")+'</div><div class="val">'+fI(S.IB+S.IC)+'</div><div class="f">'+(ok?"faktori vrijede samo u normalnom aktivnom području":"α i β prikazuju se samo u normalnom aktivnom području")+'</div></div>';
+  $("note").innerHTML=notes[S.reg];
+  $("ubeO").textContent=nf(S.ube,3)+" V";$("ucbO").textContent=nf(S.ucb,2)+" V";
+  $("wbO").textContent=nf(S.wb,1)+" µm";$("nrO").textContent=nf(S.r,0)+" : 1";
+}
+function upd(){compute();drawStatic();side();if(reduce){last=0;step(performance.now());}}
+document.querySelectorAll("input").forEach(function(i){i.addEventListener("input",upd);});
+var P={act:[0.7,5],sat:[0.72,-0.6],off:[-1,5],inv:[-1,-0.7]};
+document.querySelectorAll(".presets button").forEach(function(b){b.addEventListener("click",function(){var q=P[b.dataset.p];$("ube").value=q[0];$("ucb").value=q[1];parts=[];upd();});});
+upd();if(!reduce)requestAnimationFrame(step);
+})();
+</script>
+</body>
+</html>
